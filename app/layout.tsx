@@ -9,8 +9,8 @@ import { Toaster } from "sonner"
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" })
 
 export const metadata: Metadata = {
-  title: "AI SDR Platform",
-  description: "AI-powered sales development and prospect management",
+  title: "Davis — AI Sales Development Representative",
+  description: "Automate your outbound sales pipeline. Find prospects, personalize outreach, and close more deals.",
 }
 
 export default async function RootLayout({

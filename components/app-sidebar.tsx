@@ -13,7 +13,7 @@ import {
     ChevronRight,
     Menu,
     X,
-    Sparkles
+    Zap
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState, useEffect } from 'react';
@@ -83,12 +83,12 @@ export function AppSidebar({ user }: SidebarProps) {
             >
                 <div className="flex items-center justify-between p-6">
                     <Link href="/dashboard" className={cn("flex items-center gap-2 overflow-hidden transition-all", collapsed && "justify-center w-full")}>
-                        <div className="h-8 w-8 min-w-8 rounded-lg bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg shadow-primary/20">
-                            <Sparkles className="h-4 w-4 text-primary-foreground" />
+                        <div className="h-8 w-8 min-w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                            <Zap className="h-4 w-4 text-primary" />
                         </div>
                         <div className={cn("transition-all duration-300 overflow-hidden", collapsed ? "w-0 opacity-0" : "w-auto opacity-100")}>
-                            <span className="text-xl font-bold bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-transparent whitespace-nowrap">
-                                AI SDR
+                            <span className="text-base font-semibold text-foreground whitespace-nowrap">
+                                Davis
                             </span>
                         </div>
                     </Link>
@@ -149,7 +149,7 @@ export function AppSidebar({ user }: SidebarProps) {
                         <div className={cn("flex flex-col overflow-hidden transition-all duration-300", collapsed ? "w-0 opacity-0" : "w-auto opacity-100")}>
                             <span className="text-sm font-medium truncate text-foreground">{user?.email}</span>
                             <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                <Sparkles className="h-3 w-3 text-amber-500" />
+                                <Zap className="h-3 w-3 text-primary" />
                                 Pro Plan
                             </span>
                         </div>
