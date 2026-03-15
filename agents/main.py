@@ -273,32 +273,42 @@ async def discover_prospects_endpoint(request: ProspectDiscoveryRequest):
                     # Normalise name field: pipeline returns 'name', legacy returns 'author'
                     author = p.get("name") or p.get("author") or "Unknown"
 
-                    row = {
-                        "author":                   author,
-                        "role":                     p.get("role") or "Unknown",
-                        "company":                  p.get("company") or "Unknown",
-                        "alignment_score":          float(p.get("alignment_score", 0)),
-                        "pain_points":              p.get("pain_points", []),
-                        "industry":                 p.get("industry", ""),
-                        "solution_fit":             p.get("solution_fit", ""),
-                        "insights":                 p.get("insights", ""),
-                        "is_prospect":              bool(p.get("is_prospect", True)),
-                        "status":                   "new",
-                        # ── Existing columns ─────────────────────────────────
-                        "search_query":             request.goal,
-                        "email":                    p.get("email"),
-                        "email_confidence":         p.get("email_confidence"),
-                        "source":                   p.get("source"),
-                        "url":                      p.get("url"),
-                        "raw_data":                 p,
-                        # ── Quality/reasoning columns (new) ──────────────────
+                    # Base row — columns guaranteed to exist in the DB schema
+                    base_row = {
+                        "author":           author,
+                        "role":             p.get("role") or "Unknown",
+                        "company":          p.get("company") or "Unknown",
+                        "alignment_score":  float(p.get("alignment_score", 0)),
+                        "pain_points":      p.get("pain_points", []),
+                        "industry":         p.get("industry", ""),
+                        "solution_fit":     p.get("solution_fit", ""),
+                        "insights":         p.get("insights", ""),
+                        "is_prospect":      bool(p.get("is_prospect", True)),
+                        "status":           "new",
+                        "search_query":     request.goal,
+                        "email":            p.get("email"),
+                        "email_confidence": p.get("email_confidence"),
+                        "source":           p.get("source"),
+                        "url":              p.get("url"),
+                        "raw_data":         p,
+                    }
+
+                    # Extended row — columns added by migration (may not exist yet)
+                    extended_row = {
+                        **base_row,
                         "selection_reasoning":      p.get("selection_reasoning", ""),
                         "icp_score_breakdown":      p.get("icp_score_breakdown", {}),
                         "disqualification_signals": p.get("disqualification_signals", []),
                     }
 
-                    logger.info(f"Saving prospect: {row['author']} for goal: {row['search_query']}")
-                    result = supabase.table("prospects").insert(row).execute()
+                    logger.info(f"Saving prospect: {base_row['author']} for goal: {base_row['search_query']}")
+                    try:
+                        result = supabase.table("prospects").insert(extended_row).execute()
+                    except Exception as ext_error:
+                        # Extended columns not yet migrated — fall back to base row
+                        logger.warning(f"Extended insert failed ({ext_error}), retrying with base columns only")
+                        result = supabase.table("prospects").insert(base_row).execute()
+
                     if result.data:
                         saved_prospects.append(result.data[0])
 
