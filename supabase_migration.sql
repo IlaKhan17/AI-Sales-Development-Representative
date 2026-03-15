@@ -52,4 +52,29 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'prospects' AND column_name = 'raw_data') THEN
         ALTER TABLE prospects ADD COLUMN raw_data JSONB;
     END IF;
+
+    -- Lead quality & reasoning columns
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'prospects' AND column_name = 'selection_reasoning') THEN
+        ALTER TABLE prospects ADD COLUMN selection_reasoning TEXT;
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'prospects' AND column_name = 'icp_score_breakdown') THEN
+        ALTER TABLE prospects ADD COLUMN icp_score_breakdown JSONB;
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'prospects' AND column_name = 'disqualification_signals') THEN
+        ALTER TABLE prospects ADD COLUMN disqualification_signals TEXT[];
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'prospects' AND column_name = 'email') THEN
+        ALTER TABLE prospects ADD COLUMN email TEXT;
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'prospects' AND column_name = 'email_confidence') THEN
+        ALTER TABLE prospects ADD COLUMN email_confidence TEXT;
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'prospects' AND column_name = 'url') THEN
+        ALTER TABLE prospects ADD COLUMN url TEXT;
+    END IF;
 END $$;

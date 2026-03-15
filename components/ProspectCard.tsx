@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Prospect } from "./ProspectModal"
 import { cn } from "@/lib/utils"
-import { Building2, User, AtSign, CheckCircle2, HelpCircle } from "lucide-react"
+import { Building2, User, AtSign, CheckCircle2, HelpCircle, Brain } from "lucide-react"
 
 type ProspectCardProps = {
   prospect: Prospect
@@ -115,10 +115,18 @@ export default function ProspectCard({ prospect, onClick }: ProspectCardProps) {
           />
         </div>
 
-        <div className="pt-1 border-t border-border/50">
-          <p className="text-xs text-muted-foreground line-clamp-2 italic">
+        <div className="pt-1 border-t border-border/50 space-y-1.5">
+          <p className="text-xs text-muted-foreground line-clamp-1 italic">
             {prospect.industry}
           </p>
+          {prospect.selection_reasoning && (
+            <div className="flex items-start gap-1.5">
+              <Brain className="h-3 w-3 text-primary/60 shrink-0 mt-0.5" />
+              <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+                {prospect.selection_reasoning}
+              </p>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

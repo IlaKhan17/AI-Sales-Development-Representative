@@ -40,6 +40,7 @@ class ProspectDiscoveryService:
         enable_playwright: bool = True,
         enable_email_discovery: bool = True,
         keyword_hint: str = "",
+        icp_config: Optional[Dict[str, Any]] = None,
     ) -> List[Dict[str, Any]]:
         """
         Discover prospects using multiple parallel sources:
@@ -124,7 +125,7 @@ class ProspectDiscoveryService:
         logger.info(f"[Discovery] {len(unique_list)} unique prospects from all sources before LLM analysis")
 
         # ── LLM Analysis & Scoring ─────────────────────────────────────────
-        analyzed = await self._analyze_prospects(unique_list, company_description, goal)
+        analyzed = await self._analyze_prospects(unique_list, company_description, goal, icp_config)
 
         # ── Email Enrichment (top prospects only) ──────────────────────────
         if enable_email_discovery and analyzed:
@@ -177,22 +178,64 @@ class ProspectDiscoveryService:
     # Private: LLM analysis (enhanced to use structured playwright fields)
     # ──────────────────────────────────────────────────────────────────────
     async def _analyze_prospects(
-        self, raw_prospects: List[Dict], company_desc: str, goal: str
+        self, raw_prospects: List[Dict], company_desc: str, goal: str,
+        icp_config: Optional[Dict[str, Any]] = None,
     ) -> List[Dict]:
         if not raw_prospects:
             return []
 
-        system_prompt = """You are an expert SDR agent.
-Your goal is to analyze search results and scraped prospect data to identify
-high-quality leads based on the user's company and goal.
-Use any structured fields (_name, _role, _company) when available.
+        # Build structured ICP context from config
+        icp_lines = []
+        if icp_config:
+            if icp_config.get("target_industries"):
+                icp_lines.append(f"- Target Industries: {', '.join(icp_config['target_industries'])}")
+            if icp_config.get("company_size"):
+                icp_lines.append(f"- Company Size: {icp_config['company_size']}")
+            if icp_config.get("funding_stage"):
+                icp_lines.append(f"- Funding Stage: {icp_config['funding_stage']}")
+            if icp_config.get("tech_stack_signals"):
+                icp_lines.append(f"- Tech Stack Signals (look for these): {', '.join(icp_config['tech_stack_signals'])}")
+            if icp_config.get("pain_points_to_target"):
+                icp_lines.append(f"- Pain Points to Target: {', '.join(icp_config['pain_points_to_target'])}")
+            if icp_config.get("geography"):
+                icp_lines.append(f"- Geography: {', '.join(icp_config['geography'])}")
+            if icp_config.get("deal_breakers"):
+                icp_lines.append(f"- DEAL BREAKERS (auto-disqualify): {', '.join(icp_config['deal_breakers'])}")
+            if icp_config.get("value_proposition"):
+                icp_lines.append(f"- Our Value Proposition: {icp_config['value_proposition']}")
+
+        icp_context = ("\n\n**ICP Criteria:**\n" + "\n".join(icp_lines)) if icp_lines else ""
+
+        system_prompt = """You are an elite B2B SDR analyst. Your job is to rigorously evaluate prospects against a given ICP and assign quality scores.
+
+For EACH prospect:
+1. ASSESS ROLE FIT (35% weight): Does their title/seniority match the target roles? Decision-maker vs. influencer?
+2. ASSESS INDUSTRY FIT (25% weight): Is their company in the right industry?
+3. ASSESS COMPANY FIT (20% weight): Does company size, stage, or type match the ICP?
+4. IDENTIFY PAIN POINT SIGNALS (20% weight): Any explicit or implicit signals of the target pain points?
+5. CHECK DEAL BREAKERS: Immediately set is_prospect=false and alignment_score<0.3 if any deal breaker applies.
+
+SCORING RUBRIC:
+- alignment_score is the weighted average across the 4 dimensions above (0.0–1.0)
+- 0.85+ = Perfect ICP match, strong signals — definitely reach out
+- 0.70–0.84 = Good fit, worth pursuing
+- 0.50–0.69 = Marginal fit, lower priority
+- below 0.50 = Poor fit, set is_prospect=false
+
+SELECTION REASONING:
+- Write 2–3 sentences explaining WHY this person was selected or rejected
+- Cite SPECIFIC evidence from their profile/snippet/title
+- If rejected, state which ICP criteria they fail
+
+Be STRICT and honest. 5 high-quality prospects beat 20 mediocre ones.
+Use structured fields (_name, _role, _company) when present; fall back to title/snippet parsing.
 Return a JSON list of analyzed prospects."""
 
         candidates = raw_prospects[:20] if len(raw_prospects) > 20 else raw_prospects
 
         user_prompt = f"""
 **My Company:** {company_desc}
-**My Goal:** {goal}
+**My Goal:** {goal}{icp_context}
 
 **Candidates to Analyze:**
 {json.dumps(candidates, indent=2)}
@@ -207,9 +250,17 @@ Return a JSON list of analyzed prospects."""
     "industry": "Industry (e.g. SaaS, Healthcare)",
     "source": "LinkedIn / Product Hunt / G2 / etc.",
     "url": "profile or source URL",
-    "pain_points": ["Point 1", "Point 2"],
-    "solution_fit": "1-sentence explanation of fit",
-    "insights": "1-sentence personalized insight",
+    "pain_points": ["Pain point 1", "Pain point 2"],
+    "solution_fit": "1-sentence explanation of how the solution addresses their situation",
+    "insights": "1-sentence personalized insight for crafting outreach",
+    "selection_reasoning": "2-3 sentences explaining WHY selected or rejected, citing specific evidence",
+    "icp_score_breakdown": {{
+      "role_match": 0.0,
+      "industry_match": 0.0,
+      "company_fit": 0.0,
+      "pain_point_signals": 0.0
+    }},
+    "disqualification_signals": [],
     "alignment_score": 0.95,
     "is_prospect": true
   }}
@@ -227,6 +278,14 @@ Return a JSON list of analyzed prospects."""
                 "pain_points": ["string"],
                 "solution_fit": "string",
                 "insights": "string",
+                "selection_reasoning": "string",
+                "icp_score_breakdown": {
+                    "role_match": 0.0,
+                    "industry_match": 0.0,
+                    "company_fit": 0.0,
+                    "pain_point_signals": 0.0,
+                },
+                "disqualification_signals": ["string"],
                 "alignment_score": 0.0,
                 "is_prospect": True,
             }
@@ -247,6 +306,11 @@ Return a JSON list of analyzed prospects."""
                     p["alignment_score"] = float(p.get("alignment_score", 0))
                     if not isinstance(p.get("pain_points"), list):
                         p["pain_points"] = []
+                    if not isinstance(p.get("disqualification_signals"), list):
+                        p["disqualification_signals"] = []
+                    # Ensure icp_score_breakdown is a dict
+                    if not isinstance(p.get("icp_score_breakdown"), dict):
+                        p["icp_score_breakdown"] = {}
                     final_list.append(p)
 
             return sorted(final_list, key=lambda x: x.get("alignment_score", 0), reverse=True)

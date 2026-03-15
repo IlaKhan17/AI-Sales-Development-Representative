@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { Loader2, Mail, Building2, Globe, Sparkles, AlertCircle, Quote, AtSign, CheckCircle2, HelpCircle, XCircle, ExternalLink } from "lucide-react"
+import { Loader2, Mail, Building2, Globe, Sparkles, AlertCircle, Quote, AtSign, CheckCircle2, HelpCircle, XCircle, ExternalLink, ShieldCheck, ShieldX, Brain } from "lucide-react"
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
 import axios from "axios"
@@ -19,6 +19,13 @@ export type EmailCandidate = {
   note?: string
 }
 
+export type ICPScoreBreakdown = {
+  role_match: number
+  industry_match: number
+  company_fit: number
+  pain_point_signals: number
+}
+
 export type Prospect = {
   author: string
   name?: string
@@ -30,7 +37,11 @@ export type Prospect = {
   pain_points: string[]
   solution_fit: string
   insights: string
-  // New fields from enhanced pipeline
+  // Lead quality & reasoning
+  selection_reasoning?: string
+  icp_score_breakdown?: ICPScoreBreakdown
+  disqualification_signals?: string[]
+  // Contact discovery
   email?: string
   email_confidence?: "verified" | "likely" | "unverifiable" | "unknown"
   email_candidates?: EmailCandidate[]
@@ -202,6 +213,67 @@ export default function ProspectModal({ prospect, onClose }: ProspectModalProps)
                     })}
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Selection Reasoning */}
+            {prospect.selection_reasoning && (
+              <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 space-y-1.5">
+                <h4 className="text-sm font-medium flex items-center gap-2 text-primary">
+                  <Brain className="h-4 w-4" />
+                  Why This Lead Was Selected
+                </h4>
+                <p className="text-sm leading-relaxed text-foreground/80">{prospect.selection_reasoning}</p>
+              </div>
+            )}
+
+            {/* ICP Score Breakdown */}
+            {prospect.icp_score_breakdown && Object.keys(prospect.icp_score_breakdown).length > 0 && (
+              <div className="rounded-lg border border-border/60 bg-muted/30 p-3 space-y-2">
+                <h4 className="text-sm font-medium flex items-center gap-2 text-muted-foreground uppercase tracking-wider">
+                  <ShieldCheck className="h-4 w-4" />
+                  ICP Fit Breakdown
+                </h4>
+                <div className="grid grid-cols-2 gap-x-6 gap-y-2">
+                  {[
+                    { key: "role_match", label: "Role Match" },
+                    { key: "industry_match", label: "Industry" },
+                    { key: "company_fit", label: "Company Fit" },
+                    { key: "pain_point_signals", label: "Pain Point Signals" },
+                  ].map(({ key, label }) => {
+                    const val = (prospect.icp_score_breakdown as Record<string, number>)[key] ?? 0
+                    const pct = Math.round(val * 100)
+                    return (
+                      <div key={key} className="space-y-1">
+                        <div className="flex justify-between text-xs">
+                          <span className="text-muted-foreground">{label}</span>
+                          <span className={cn(
+                            "font-semibold",
+                            pct >= 80 ? "text-green-500" : pct >= 50 ? "text-yellow-500" : "text-red-400"
+                          )}>{pct}%</span>
+                        </div>
+                        <Progress value={pct} className="h-1.5" />
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Disqualification Signals */}
+            {prospect.disqualification_signals && prospect.disqualification_signals.length > 0 && (
+              <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-3 space-y-1.5">
+                <h4 className="text-sm font-medium flex items-center gap-2 text-destructive">
+                  <ShieldX className="h-4 w-4" />
+                  Disqualification Signals
+                </h4>
+                <div className="flex flex-wrap gap-2">
+                  {prospect.disqualification_signals.map((signal, i) => (
+                    <Badge key={i} variant="outline" className="text-xs border-destructive/30 text-destructive">
+                      {signal}
+                    </Badge>
+                  ))}
+                </div>
               </div>
             )}
 
