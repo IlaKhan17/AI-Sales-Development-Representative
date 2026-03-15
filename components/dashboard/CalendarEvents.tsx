@@ -70,7 +70,7 @@ export function CalendarEvents() {
     const supabase = createClient();
     const apiUrl =
         process.env.NEXT_PUBLIC_API_URL ||
-        "https://ai-sdr-production.up.railway.app";
+        "https://ai-sdr-production-afd7.up.railway.app";
 
     useEffect(() => {
         fetchEvents();

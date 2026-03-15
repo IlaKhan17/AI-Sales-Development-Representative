@@ -43,7 +43,7 @@ export function MeetingSearch() {
         return;
       }
 
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://ai-sdr-production.up.railway.app';
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://ai-sdr-production-afd7.up.railway.app';
       const response = await fetch(`${apiUrl}/search-knowledge-base`, {
         method: 'POST',
         headers: {

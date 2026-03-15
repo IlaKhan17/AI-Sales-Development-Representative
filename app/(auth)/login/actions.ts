@@ -60,7 +60,7 @@ export async function oAuthSignIn(provider: Provider) {
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider,
     options: {
-      redirectTo: `${process.env.NEXT_PUBLIC_URL}/auth/callback?next=/prospects`,
+      redirectTo: `${process.env.NEXT_PUBLIC_URL || 'https://ai.mohdjami.com'}/auth/callback?next=/dashboard`,
     },
   });
 

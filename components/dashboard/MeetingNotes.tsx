@@ -67,7 +67,7 @@ export function MeetingNotes({ initialMeetings }: { initialMeetings: Meeting[] }
         meeting_url: meetingUrl,
         title: meetingTitle,
       };
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://ai-sdr-production.up.railway.app';
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://ai-sdr-production-afd7.up.railway.app';
       const response = await fetch(`${apiUrl}/add-bot`, {
         method: 'POST',
         headers: {
@@ -105,7 +105,7 @@ export function MeetingNotes({ initialMeetings }: { initialMeetings: Meeting[] }
 
   const removeBot = async (meeting: Meeting) => {
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://ai-sdr-production.up.railway.app';
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://ai-sdr-production-afd7.up.railway.app';
       const response = await fetch(`${apiUrl}/remove-bot`, {
         method: 'POST',
         headers: {
@@ -189,7 +189,7 @@ export function MeetingNotes({ initialMeetings }: { initialMeetings: Meeting[] }
   const refreshCompletedMeetings = async () => {
     setRefreshing(true);
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://ai-sdr-production.up.railway.app';
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://ai-sdr-production-afd7.up.railway.app';
       const response = await fetch(`${apiUrl}/meetings`, {
         method: 'GET',
         headers: {

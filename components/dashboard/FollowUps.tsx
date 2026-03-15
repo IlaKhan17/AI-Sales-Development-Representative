@@ -40,7 +40,7 @@ export function FollowUps({ initialEmails }: FollowUpsProps) {
   const [editedFollowup, setEditedFollowup] = useState("")
   const supabase = createClient()
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://ai-sdr-production.up.railway.app'
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://ai-sdr-production-afd7.up.railway.app'
 
   const fetchReplies = async () => {
     setLoading(true)

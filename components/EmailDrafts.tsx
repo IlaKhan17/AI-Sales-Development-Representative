@@ -29,7 +29,7 @@ export default function EmailDraftModal({ prospect, emailDraft, onClose }: Email
   const [googleConnected, setGoogleConnected] = useState<boolean | null>(null)
   const supabase = createClient()
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://ai-sdr-production.up.railway.app'
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://ai-sdr-production-afd7.up.railway.app'
 
   useEffect(() => {
     checkGoogleStatus()
