@@ -5,8 +5,8 @@ import { redirect } from "next/navigation"
 import { AppSidebar } from "@/components/app-sidebar"
 
 export const metadata: Metadata = {
-  title: "Prospect App",
-  description: "Generate and manage prospects",
+  title: "Davis - AI Sales Development",
+  description: "AI-powered sales automation platform",
 }
 
 export default async function RootLayout({

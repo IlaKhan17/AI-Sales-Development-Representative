@@ -224,13 +224,18 @@ export function MeetingNotes({ initialMeetings }: { initialMeetings: Meeting[] }
   return (
     <div className="grid gap-6 fade-in-bottom">
       <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">Meeting Notes</h2>
-          <p className="text-muted-foreground">Manage your meeting bots and view insights</p>
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+            <Video className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <h2 className="text-xl font-semibold tracking-tight">Meeting Notes</h2>
+            <p className="text-sm text-muted-foreground">Manage your meeting bots and view insights</p>
+          </div>
         </div>
         <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
           <DialogTrigger asChild>
-            <Button className="shadow-lg hover:shadow-primary/20 transition-all">
+            <Button className="shadow-sm">
               <Plus className="mr-2 h-4 w-4" />
               Add Meeting Bot
             </Button>

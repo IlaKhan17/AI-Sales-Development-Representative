@@ -254,7 +254,7 @@ export default function ProspectList({ initialProspects }: ProspectListProps) {
 
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="w-full shadow-lg shadow-primary/20" size="lg">
+            <Button className="w-full shadow-sm" size="lg">
               <Plus className="mr-2 h-4 w-4" />
               New Project
             </Button>

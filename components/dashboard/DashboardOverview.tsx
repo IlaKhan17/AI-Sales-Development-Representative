@@ -140,7 +140,7 @@ export function DashboardOverview({ dashboardOverview }: { dashboardOverview: Da
         </Card>
 
         {/* Top Campaigns */}
-        <Card className="col-span-3 glass-card bg-gradient-to-br from-card to-secondary/50">
+        <Card className="col-span-3 glass-card">
           <CardHeader>
             <CardTitle>Campaign Performance</CardTitle>
             <CardDescription>Highest converting outreach templates</CardDescription>

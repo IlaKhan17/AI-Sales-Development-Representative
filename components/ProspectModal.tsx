@@ -109,7 +109,7 @@ export default function ProspectModal({ prospect, onClose }: ProspectModalProps)
     <>
       <Dialog open={true} onOpenChange={onClose}>
         <DialogContent className="sm:max-w-[720px] glass-card border-primary/10 overflow-hidden p-0 gap-0">
-          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary/20 via-primary to-primary/20" />
+          <div className="absolute top-0 left-0 w-full h-0.5 bg-primary/30" />
 
           {/* Header */}
           <DialogHeader className="p-6 pb-4 flex-row items-start justify-between space-y-0">
@@ -336,7 +336,7 @@ export default function ProspectModal({ prospect, onClose }: ProspectModalProps)
             <Button
               onClick={handleGenerateEmailDraft}
               disabled={loading}
-              className="w-full sm:w-auto shadow-lg shadow-primary/20"
+              className="w-full sm:w-auto shadow-sm"
               size="lg"
             >
               {loading ? (

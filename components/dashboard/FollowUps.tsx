@@ -119,11 +119,16 @@ export function FollowUps({ initialEmails }: FollowUpsProps) {
   return (
     <div className="space-y-6 fade-in-bottom">
       <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">Email Replies</h2>
-          <p className="text-muted-foreground">AI-analyzed responses requiring your attention</p>
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+            <Mail className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <h2 className="text-xl font-semibold tracking-tight">Email Replies</h2>
+            <p className="text-sm text-muted-foreground">AI-analyzed responses requiring your attention</p>
+          </div>
         </div>
-        <Button onClick={fetchReplies} disabled={loading} className="shadow-lg hover:shadow-primary/20 transition-all">
+        <Button onClick={fetchReplies} disabled={loading} className="shadow-sm">
           {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
           Analyze Replies
         </Button>
@@ -155,7 +160,7 @@ export function FollowUps({ initialEmails }: FollowUpsProps) {
                 {item.suggested_followup && (
                   <div className="flex-shrink-0">
                     <Button
-                      className="w-full md:w-auto bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-600/90 text-white shadow-lg shadow-primary/20"
+                      className="w-full md:w-auto shadow-sm"
                       onClick={() => {
                         setSelectedEmail(item)
                         setEditedFollowup(item.suggested_followup?.body || "")
@@ -188,7 +193,9 @@ export function FollowUps({ initialEmails }: FollowUpsProps) {
           <DialogContent className="sm:max-w-[700px] glass-card border-none shadow-2xl">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-purple-500" />
+                <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                </div>
                 AI Suggested Follow-up
               </DialogTitle>
               <DialogDescription>
@@ -219,7 +226,7 @@ export function FollowUps({ initialEmails }: FollowUpsProps) {
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setSelectedEmail(null)}>Cancel</Button>
-              <Button onClick={handleSendFollowup} className="bg-gradient-to-r from-primary to-purple-600">
+              <Button onClick={handleSendFollowup}>
                 <Send className="mr-2 h-4 w-4" />
                 Send Response
               </Button>

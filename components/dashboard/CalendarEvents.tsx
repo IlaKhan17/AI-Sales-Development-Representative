@@ -219,15 +219,20 @@ export function CalendarEvents() {
     return (
         <div className="space-y-4">
             <div className="flex items-center justify-between">
-                <div>
-                    <h2 className="text-lg font-semibold">Upcoming Events</h2>
-                    <p className="text-sm text-muted-foreground">
-                        {events.length} events on your calendar
-                    </p>
+                <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <CalendarPlus className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                        <h2 className="text-xl font-semibold tracking-tight">Upcoming Events</h2>
+                        <p className="text-sm text-muted-foreground">
+                            {events.length} events on your calendar
+                        </p>
+                    </div>
                 </div>
                 <Button
                     onClick={() => setShowCreateDialog(true)}
-                    className="gap-2 shadow-lg shadow-primary/20"
+                    className="gap-2 shadow-sm"
                 >
                     <CalendarPlus className="h-4 w-4" />
                     Schedule Meeting
@@ -315,12 +320,12 @@ export function CalendarEvents() {
 
             {/* Create Event Dialog */}
             <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-                <DialogContent className="sm:max-w-[500px] glass-card border-primary/10 p-0 overflow-hidden">
-                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500" />
-
+                <DialogContent className="sm:max-w-[500px] glass-card border-none shadow-2xl p-0 overflow-hidden">
                     <DialogHeader className="px-6 py-4 bg-muted/20 border-b border-border/50">
                         <DialogTitle className="flex items-center gap-2">
-                            <CalendarPlus className="h-5 w-5 text-primary" />
+                            <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                              <CalendarPlus className="h-4 w-4 text-primary" />
+                            </div>
                             Schedule Meeting
                         </DialogTitle>
                     </DialogHeader>
@@ -397,7 +402,7 @@ export function CalendarEvents() {
                         <Button
                             onClick={handleCreateEvent}
                             disabled={creating}
-                            className="gap-2 shadow-lg shadow-primary/20"
+                            className="gap-2 shadow-sm"
                         >
                             {creating ? (
                                 <>

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { BrainCircuit, Loader2 } from 'lucide-react';
+import { Zap, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { login, signup } from './actions';
 import { OAuthButtons } from '@/components/buttons/oauth-signin';
@@ -62,12 +62,19 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col justify-center items-center px-4">
-      <Link href="/" className="mb-8 flex items-center space-x-2">
-        <BrainCircuit className="h-8 w-8 text-primary" />
-        <span className="text-2xl font-bold">AI SDR</span>
+    <div className="min-h-screen bg-background flex flex-col justify-center items-center px-4 relative overflow-hidden">
+      {/* Subtle grid background */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,hsl(var(--border)/0.3)_1px,transparent_1px),linear-gradient(to_bottom,hsl(var(--border)/0.3)_1px,transparent_1px)] bg-[size:4rem_4rem]" />
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-primary/5 rounded-full blur-3xl" />
+
+      <Link href="/" className="relative mb-8 flex items-center gap-2">
+        <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+          <Zap className="h-5 w-5 text-primary" />
+        </div>
+        <span className="text-2xl font-semibold text-foreground">Davis</span>
       </Link>
-      <Card className="w-full max-w-md p-8">
+      <Card className="relative w-full max-w-md p-8 glass-card">
         <Tabs defaultValue="login" className="w-full">
           <TabsList className="grid w-full grid-cols-2 mb-8">
             <TabsTrigger value="login">Login</TabsTrigger>
@@ -125,7 +132,7 @@ export default function AuthPage() {
           </div>
         </div>
       </Card>
-      <p className="mt-8 text-center text-sm text-muted-foreground">
+      <p className="relative mt-8 text-center text-sm text-muted-foreground">
         By signing up, you agree to our{' '}
         <Link href="/terms" className="font-medium underline underline-offset-4 hover:text-primary">
           Terms of Service

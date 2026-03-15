@@ -1,7 +1,7 @@
 import { DashboardTabs } from '@/components/dashboard/DashboardTabs';
 import redis from '@/utils/redis';
 import { createClient } from '@/utils/supabase/server';
-import { Sparkles } from 'lucide-react';
+import { Zap } from 'lucide-react';
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -68,13 +68,19 @@ export default async function DashboardPage() {
     <div className="container mx-auto py-8">
       <div className="flex flex-col gap-8">
         <div className="flex flex-col gap-2">
-          <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent flex items-center gap-2">
-            Dashboard
-            <Sparkles className="h-6 w-6 text-primary animate-pulse" />
-          </h1>
-          <p className="text-muted-foreground text-lg">
-            Overview of your sales pipeline and activity
-          </p>
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Zap className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-semibold tracking-tight text-foreground">
+                Dashboard
+              </h1>
+              <p className="text-muted-foreground">
+                Overview of your sales pipeline and activity
+              </p>
+            </div>
+          </div>
         </div>
         <DashboardTabs dashboardData={dashboardData} />
       </div>

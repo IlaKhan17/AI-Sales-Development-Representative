@@ -35,8 +35,8 @@ export type DashboardTabsProps = {
 export function DashboardTabs({ dashboardData }: DashboardTabsProps) {
   return (
     <Tabs defaultValue="overview" className="space-y-6">
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-        <TabsList className="grid w-full grid-cols-4 lg:w-[500px]">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pb-4 border-b border-border/50">
+        <TabsList className="grid w-full grid-cols-4 lg:w-[500px] bg-card border border-border/50">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="follow-ups">Follow-ups</TabsTrigger>
           <TabsTrigger value="meetings">Meetings</TabsTrigger>
