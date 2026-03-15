@@ -23,7 +23,9 @@ logger = logging.getLogger(__name__)
 # Google OAuth Config
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "")
-GOOGLE_REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI", "http://localhost:8000/auth/google/callback")
+GOOGLE_REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI", "")
+if not GOOGLE_REDIRECT_URI:
+    logger.warning("GOOGLE_REDIRECT_URI not set — Google OAuth will not work correctly")
 
 SCOPES = [
     "https://www.googleapis.com/auth/gmail.send",

@@ -1237,7 +1237,7 @@ async def google_callback(code: str, state: str = ""):
         print(f"Exchange successful: {result}")
         
         # Redirect to frontend with success
-        frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
+        frontend_url = os.getenv("FRONTEND_URL", "https://ai.mohdjami.com")
         redirect_url = f"{frontend_url}/dashboard?google_connected=true"
         print(f"Redirecting to: {redirect_url}")
         print("=== GOOGLE CALLBACK SUCCESS ===")
@@ -1252,7 +1252,7 @@ async def google_callback(code: str, state: str = ""):
         print("=== GOOGLE CALLBACK FAILED ===")
         
         logger.error(f"Google OAuth callback error: {e}")
-        frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
+        frontend_url = os.getenv("FRONTEND_URL", "https://ai.mohdjami.com")
         return RedirectResponse(
             url=f"{frontend_url}/dashboard?google_error={str(e)}"
         )
