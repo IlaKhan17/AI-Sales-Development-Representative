@@ -176,10 +176,23 @@ async def analyze():
 
 
 # Request models
+class ICPConfig(BaseModel):
+    """Structured Ideal Customer Profile definition for more precise lead scoring."""
+    target_industries: Optional[List[str]] = []
+    company_size: Optional[str] = ""        # e.g. "50-500 employees", "Series A-C startups"
+    funding_stage: Optional[str] = ""       # e.g. "Seed", "Series A", "Series B-C"
+    tech_stack_signals: Optional[List[str]] = []  # Keywords indicating right tech stack
+    pain_points_to_target: Optional[List[str]] = []  # Specific pain points to look for
+    geography: Optional[List[str]] = []
+    deal_breakers: Optional[List[str]] = []  # Auto-disqualify if any match (e.g. "agency", "consulting")
+    value_proposition: Optional[str] = ""   # Your product's key value prop
+
+
 class ProspectDiscoveryRequest(BaseModel):
     company_description: str
     goal: str
     job_titles: List[str]
+    icp: Optional[ICPConfig] = None
     enable_playwright: Optional[bool] = True
     enable_email_discovery: Optional[bool] = True
     keyword_hint: Optional[str] = ""
@@ -249,6 +262,7 @@ async def discover_prospects_endpoint(request: ProspectDiscoveryRequest):
             enable_playwright=request.enable_playwright if request.enable_playwright is not None else True,
             enable_email_discovery=request.enable_email_discovery if request.enable_email_discovery is not None else True,
             keyword_hint=request.keyword_hint or "",
+            icp_config=request.icp.model_dump() if request.icp else None,
         )
         
         # 3. Save to Supabase (CRITICAL STEP)
@@ -259,7 +273,8 @@ async def discover_prospects_endpoint(request: ProspectDiscoveryRequest):
                     # Normalise name field: pipeline returns 'name', legacy returns 'author'
                     author = p.get("name") or p.get("author") or "Unknown"
 
-                    row = {
+                    # Base row — columns guaranteed to exist in the DB schema
+                    base_row = {
                         "author":           author,
                         "role":             p.get("role") or "Unknown",
                         "company":          p.get("company") or "Unknown",
@@ -270,17 +285,30 @@ async def discover_prospects_endpoint(request: ProspectDiscoveryRequest):
                         "insights":         p.get("insights", ""),
                         "is_prospect":      bool(p.get("is_prospect", True)),
                         "status":           "new",
-                        # ── New columns ──────────────────────────────────────
                         "search_query":     request.goal,
                         "email":            p.get("email"),
                         "email_confidence": p.get("email_confidence"),
                         "source":           p.get("source"),
                         "url":              p.get("url"),
-                        "raw_data":         p,   # JSONB — store full object for debugging
+                        "raw_data":         p,
                     }
 
-                    logger.info(f"Saving prospect: {row['author']} for goal: {row['search_query']}")
-                    result = supabase.table("prospects").insert(row).execute()
+                    # Extended row — columns added by migration (may not exist yet)
+                    extended_row = {
+                        **base_row,
+                        "selection_reasoning":      p.get("selection_reasoning", ""),
+                        "icp_score_breakdown":      p.get("icp_score_breakdown", {}),
+                        "disqualification_signals": p.get("disqualification_signals", []),
+                    }
+
+                    logger.info(f"Saving prospect: {base_row['author']} for goal: {base_row['search_query']}")
+                    try:
+                        result = supabase.table("prospects").insert(extended_row).execute()
+                    except Exception as ext_error:
+                        # Extended columns not yet migrated — fall back to base row
+                        logger.warning(f"Extended insert failed ({ext_error}), retrying with base columns only")
+                        result = supabase.table("prospects").insert(base_row).execute()
+
                     if result.data:
                         saved_prospects.append(result.data[0])
 
@@ -380,36 +408,56 @@ class AutoFillRequest(BaseModel):
 
 @app.post('/prospects/autofill')
 async def autofill_preferences(request: AutoFillRequest):
-    """Generate search preferences from a job description"""
+    """Generate search preferences and ICP config from a job description"""
     try:
         llm_service = LLMService()
-        system_prompt = "You are an expert SDR manager. Analyze the job description and extract the ideal prospect persona."
+        system_prompt = "You are an expert SDR manager. Analyze the job description and extract the ideal prospect persona and ICP configuration."
         user_prompt = f"""
         Job Description:
         {request.job_description}
 
-        Based on this JD, identify:
-        1. A company description (what the hiring company does/sells)
-        2. A prospecting goal (who they want to sell to)
-        3. Target Job Titles (who would buy this?)
+        Based on this JD, extract:
+        1. company_description — what the hiring company does/sells
+        2. goal — a one-sentence prospecting goal (who they want to sell to)
+        3. job_titles — list of seniority-appropriate buyer titles
+        4. icp — Ideal Customer Profile config:
+           - target_industries: list of relevant industries (e.g. "SaaS", "FinTech")
+           - company_size: target size range (e.g. "50-500 employees")
+           - funding_stage: target stage (e.g. "Series A-C") or empty string if unknown
+           - pain_points_to_target: list of pain points the product solves
+           - deal_breakers: list of company types to exclude (e.g. "agency", "consulting", "government")
 
         Return JSON:
         {{
             "company_description": "...",
             "goal": "...",
-            "job_titles": ["Title 1", "Title 2"]
+            "job_titles": ["Title 1", "Title 2"],
+            "icp": {{
+                "target_industries": ["Industry 1"],
+                "company_size": "...",
+                "funding_stage": "...",
+                "pain_points_to_target": ["Pain point 1"],
+                "deal_breakers": ["agency", "consulting"]
+            }}
         }}
         """
-        
+
         json_structure = {
             "company_description": "string",
             "goal": "string",
-            "job_titles": ["string"]
+            "job_titles": ["string"],
+            "icp": {
+                "target_industries": ["string"],
+                "company_size": "string",
+                "funding_stage": "string",
+                "pain_points_to_target": ["string"],
+                "deal_breakers": ["string"],
+            }
         }
-        
+
         result = await llm_service.get_json_response(system_prompt, user_prompt, json_structure)
         return result
-        
+
     except Exception as e:
         logger.error(f"Error in autofill: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))

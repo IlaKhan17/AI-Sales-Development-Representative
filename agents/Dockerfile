@@ -1,37 +1,41 @@
-# Use the official Python image as a base
-FROM python:3.9-slim
+FROM python:3.11-slim
 
-# Set environment variables
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
 
-# Set the working directory
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
+# System deps for Playwright Chromium
+RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
-    unzip \
-    chromium-driver \
-    chromium \
-    && apt-get clean \
+    ca-certificates \
+    fonts-liberation \
+    libnss3 \
+    libatk-bridge2.0-0 \
+    libdrm2 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxrandr2 \
+    libgbm1 \
+    libasound2 \
+    libpango-1.0-0 \
+    libcairo2 \
+    libcups2 \
+    libxkbcommon0 \
+    libatspi2.0-0 \
+    libxshmfence1 \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy the requirements file
 COPY requirements.txt .
-
-# Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the application code
-COPY . . 
+# Install Playwright Chromium browser
+RUN playwright install chromium
 
-# Set the environment variable for the Chrome binary
-ENV CHROME_BIN=/usr/bin/chromium
+COPY . .
 
-# Expose the port the app runs on
-EXPOSE 8001
+# Railway injects PORT env var; default to 8001
+ENV PORT=8001
+EXPOSE ${PORT}
 
-# Command to run the application
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001", "--reload"]
-
+CMD uvicorn main:app --host 0.0.0.0 --port ${PORT}

@@ -122,6 +122,13 @@ export default function ProspectList({ initialProspects }: ProspectListProps) {
     enable_playwright?: boolean;
     enable_email_discovery?: boolean;
     keyword_hint?: string;
+    icp?: {
+      target_industries: string[];
+      company_size: string;
+      funding_stage: string;
+      deal_breakers: string[];
+      pain_points_to_target: string[];
+    };
   }) => {
     setLoading(true);
     try {
@@ -138,6 +145,7 @@ export default function ProspectList({ initialProspects }: ProspectListProps) {
           enable_playwright: preferences.enable_playwright ?? true,
           enable_email_discovery: preferences.enable_email_discovery ?? true,
           keyword_hint: preferences.keyword_hint ?? '',
+          icp: preferences.icp ?? null,
         }),
       });
 
