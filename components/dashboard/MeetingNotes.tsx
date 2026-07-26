@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/accordion';
 import { MeetingSearch } from './MeetingSearch';
 import { cn } from '@/lib/utils';
+import { createClient } from '@/utils/supabase/client';
 
 export type Meeting = {
   id: string;
@@ -60,6 +61,12 @@ export function MeetingNotes({ initialMeetings }: { initialMeetings: Meeting[] }
   const [meetingTitle, setMeetingTitle] = useState('');
   const [refreshing, setRefreshing] = useState(false);
 
+  const getAccessToken = async () => {
+    const supabase = createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    return session?.access_token ?? null;
+  };
+
   const addBot = async () => {
     setLoading(true);
     try {
@@ -67,17 +74,26 @@ export function MeetingNotes({ initialMeetings }: { initialMeetings: Meeting[] }
         meeting_url: meetingUrl,
         title: meetingTitle,
       };
+      const token = await getAccessToken();
+      if (!token) {
+        toast.error('Please sign in first');
+        return;
+      }
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://ai-sdr-production-afd7.up.railway.app';
       const response = await fetch(`${apiUrl}/add-bot`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
           title: meetingData.title,
           meeting_url: meetingData.meeting_url,
         }),
       });
+      if (!response.ok) {
+        throw new Error('Failed to add bot');
+      }
       const data = await response.json();
       console.log(data.meeting.botId);
       const newMeeting: Meeting = {
@@ -105,16 +121,20 @@ export function MeetingNotes({ initialMeetings }: { initialMeetings: Meeting[] }
 
   const removeBot = async (meeting: Meeting) => {
     try {
+      const token = await getAccessToken();
+      if (!token) {
+        toast.error('Please sign in first');
+        return;
+      }
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://ai-sdr-production-afd7.up.railway.app';
       const response = await fetch(`${apiUrl}/remove-bot`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-meeting-baas-api-key': process.env.MEETING_BASS_API!,
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify(meeting),
       });
-      console.log(response);
       if (!response.ok) {
         throw new Error('Failed to delete bot');
       }
@@ -189,11 +209,17 @@ export function MeetingNotes({ initialMeetings }: { initialMeetings: Meeting[] }
   const refreshCompletedMeetings = async () => {
     setRefreshing(true);
     try {
+      const token = await getAccessToken();
+      if (!token) {
+        toast.error('Please sign in first');
+        return;
+      }
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://ai-sdr-production-afd7.up.railway.app';
       const response = await fetch(`${apiUrl}/meetings`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
       });
 

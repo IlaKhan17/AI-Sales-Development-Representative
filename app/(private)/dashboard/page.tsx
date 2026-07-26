@@ -1,5 +1,5 @@
 import { DashboardTabs } from '@/components/dashboard/DashboardTabs';
-import redis from '@/utils/redis';
+import { getRedis } from '@/utils/redis';
 import { createClient } from '@/utils/supabase/server';
 import { Zap } from 'lucide-react';
 
@@ -18,8 +18,16 @@ export default async function DashboardPage() {
   // Fetch prospects data
   const { data: prospectsData } = await supabase.from('prospects').select('*');
 
-  // Get analyzed emails from Redis cache
-  const cachedEmails = await redis.get('analyzed_emails');
+  // Get analyzed emails from Redis cache (optional — degrades gracefully)
+  const redis = getRedis();
+  let cachedEmails: string | null = null;
+  if (redis) {
+    try {
+      cachedEmails = await redis.get('analyzed_emails');
+    } catch (e) {
+      console.error('Failed to read analyzed_emails from Redis:', e);
+    }
+  }
 
   // Calculate statistics
   const sentEmails = emailsData?.filter((email) => email.status === 'sent') || [];

@@ -1,10 +1,10 @@
 import ProspectList from "@/components/ProspectList"
-import redis from "@/utils/redis"
 import { Users } from 'lucide-react'
 
 export default async function ProspectsPage() {
-  const cachedProspects = await redis.get("atlan_prospects")
-  const prospects = JSON.parse(cachedProspects || '[]')
+  // Prospects are loaded client-side from the API (per-user); the old Redis
+  // read here targeted a key that nothing ever wrote.
+  const prospects: never[] = []
 
   return (
     <div className="flex flex-col gap-8">

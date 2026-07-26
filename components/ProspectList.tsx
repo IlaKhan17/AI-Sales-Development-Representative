@@ -24,6 +24,7 @@ import ProspectModal, { Prospect } from './ProspectModal';
 import ProspectPreferencesForm from './ProspectPreferencesForm';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { createClient } from '@/utils/supabase/client';
 // import { formatDistanceToNow } from 'date-fns';
 
 function timeAgo(dateString: string) {
@@ -76,11 +77,17 @@ export default function ProspectList({ initialProspects }: ProspectListProps) {
     fetchJobs();
   }, []);
 
+  const getAuthHeaders = async (): Promise<Record<string, string>> => {
+    const supabase = createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    return session ? { Authorization: `Bearer ${session.access_token}` } : {};
+  };
+
   const fetchJobs = async () => {
     setLoadingJobs(true);
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-      const response = await fetch(`${apiUrl}/discovery-jobs`);
+      const response = await fetch(`${apiUrl}/discovery-jobs`, { headers: await getAuthHeaders() });
       if (response.ok) {
         const data = await response.json();
         setJobs(data);
@@ -99,7 +106,7 @@ export default function ProspectList({ initialProspects }: ProspectListProps) {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
       // Encode the ID since it might contain spaces/special chars (as it is the goal string)
       const encodedId = encodeURIComponent(jobId);
-      const response = await fetch(`${apiUrl}/discovery-jobs/${encodedId}/prospects`);
+      const response = await fetch(`${apiUrl}/discovery-jobs/${encodedId}/prospects`, { headers: await getAuthHeaders() });
 
       if (response.ok) {
         const data = await response.json();
@@ -137,6 +144,7 @@ export default function ProspectList({ initialProspects }: ProspectListProps) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(await getAuthHeaders()),
         },
         body: JSON.stringify({
           company_description: preferences.company_description,
