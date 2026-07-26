@@ -1,17 +1,28 @@
+"""Manual test script: add a MeetingBaaS bot to a meeting.
+
+Usage: BOT_API_KEY=... python join_meeting.py <meeting_url>
+"""
+
+import os
+import sys
+
 import requests
+
 url = "https://api.meetingbaas.com/bots"
+
+api_key = os.environ["BOT_API_KEY"]
+meeting_url = sys.argv[1] if len(sys.argv) > 1 else "https://meet.google.com/example"
 
 headers = {
     "Content-Type": "application/json",
-    "x-meeting-baas-api-key": "51a9fe8967eab1e85e5e975ddaa10e536e7af03d67bac4cd00aff249bb413f07",
+    "x-meeting-baas-api-key": api_key,
 }
 
 config = {
-    "meeting_url": "https://meet.google.com/puo-neku-for",
+    "meeting_url": meeting_url,
     "bot_name": "AI Notetaker",
     "recording_mode": "speaker_view",
-    "bot_image": "https://example.com/bot.jpg",
-    "entry_message": "I am a good meeting bot :)",
+    "entry_message": "Hi, I'm Davis — an AI notetaker for this meeting.",
     "reserved": False,
     "speech_to_text": {
         "provider": "Default"

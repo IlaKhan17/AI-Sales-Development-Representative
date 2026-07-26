@@ -1,5 +1,6 @@
 "use client"
 
+import { createClient } from "@/utils/supabase/client"
 import { useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
@@ -93,7 +94,11 @@ export default function ProspectModal({ prospect, onClose }: ProspectModalProps)
     setLoading(true)
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
-      const response = await axios.post(`${apiUrl}/draft-emails`, prospect)
+      const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      const response = await axios.post(`${apiUrl}/draft-emails`, prospect, {
+        headers: session ? { Authorization: `Bearer ${session.access_token}` } : {},
+      })
       setEmailDraft(response.data.email)
       setShowEmailDraft(true)
     } catch (error) {

@@ -5,7 +5,6 @@ import json
 import logging
 import re
 import time
-import random
 import os
 from openai import AsyncOpenAI
 
@@ -81,21 +80,22 @@ class VectorService:
             return embedding_vector
             
         except Exception as e:
+            # Never substitute a fake vector: a random embedding would be
+            # upserted as if real and permanently corrupt search results.
             logger.error(f"Error creating embedding: {str(e)}")
-            # Use random non-zero vector instead of all zeros to avoid Pinecone errors
-            random_vector = [random.uniform(0.01, 0.1) for _ in range(self.dimension)]
-            logger.warning("Returning random non-zero vector as fallback due to error")
-            return random_vector
+            raise
 
     async def store_meeting_data(self, meeting_data: Dict[str, Any], user_id: str):
         """Store meeting data in Pinecone using chunking for large transcripts and user_id for namespace"""
         try:
             if not user_id:
                 raise ValueError("user_id is required for storing meeting data")
+            if not meeting_data.get("id"):
+                raise ValueError("meeting_data.id is required for storing meeting data")
 
             # Create base metadata common to all chunks
             base_metadata = {
-                "meeting_id": meeting_data.get("id", "meet_20250407_152504_89f13387"),
+                "meeting_id": meeting_data["id"],
                 "title": meeting_data.get("title", "Untitled Meeting"),
                 "date": meeting_data.get("date", ""),
                 # Use speakers instead of participants, with empty list fallback
@@ -268,19 +268,19 @@ class VectorService:
                     try:
                         if "action_items" in metadata:
                             meeting_metadata[meeting_id_meta]["action_items"] = json.loads(metadata.get("action_items", "[]"))
-                    except:
+                    except (ValueError, TypeError):
                         meeting_metadata[meeting_id_meta]["action_items"] = []
                         
                     try:
                         if "main_topics" in metadata:
                             meeting_metadata[meeting_id_meta]["main_topics"] = json.loads(metadata.get("main_topics", "[]"))
-                    except:
+                    except (ValueError, TypeError):
                         meeting_metadata[meeting_id_meta]["main_topics"] = []
                         
                     try:
                         if "insights" in metadata:
                             meeting_metadata[meeting_id_meta]["insights"] = json.loads(metadata.get("insights", "[]"))
-                    except:
+                    except (ValueError, TypeError):
                         meeting_metadata[meeting_id_meta]["insights"] = []
                 
                 # Add the chunk text to the meeting data

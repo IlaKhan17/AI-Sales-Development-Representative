@@ -7,6 +7,7 @@ import { Switch } from '@/components/ui/switch';
 import { Loader2, Plus, X, Sparkles, Globe, AtSign, ChevronDown, ChevronUp, Target } from 'lucide-react';
 import { DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
+import { createClient } from '@/utils/supabase/client';
 
 type ICPConfig = {
     target_industries: string[];
@@ -112,9 +113,14 @@ export default function ProspectPreferencesForm({ onSubmit, isLoading }: Prospec
         setIsAutoFilling(true);
         try {
             const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+            const supabase = createClient();
+            const { data: { session } } = await supabase.auth.getSession();
             const response = await fetch(`${apiUrl}/prospects/autofill`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}),
+                },
                 body: JSON.stringify({ job_description: jobDescription }),
             });
 

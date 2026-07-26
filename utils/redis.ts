@@ -1,14 +1,19 @@
 import Redis from "ioredis";
 
-// Create a Redis instance.
-// By default, it will connect to localhost:6379.
-// We are going to cover how to specify connection options soon.
-const redisUri = process.env.REDIS_URL!;
+// Lazy singleton: don't connect (or throw) at module load — that would break
+// every page importing this file at build time when REDIS_URL is unset.
+let client: Redis | null = null;
 
-if (!redisUri) {
-  throw new Error("Please provide a REDIS_URI in the environment variables");
+export function getRedis(): Redis | null {
+  const redisUrl = process.env.REDIS_URL;
+  if (!redisUrl) {
+    console.warn("REDIS_URL is not set — Redis-backed features are disabled");
+    return null;
+  }
+  if (!client) {
+    client = new Redis(redisUrl, { maxRetriesPerRequest: 2 });
+  }
+  return client;
 }
 
-const redis = new Redis(redisUri);
-
-export default redis;
+export default getRedis;

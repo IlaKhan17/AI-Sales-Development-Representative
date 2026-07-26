@@ -54,6 +54,10 @@ export default function EmailDraftModal({ prospect, emailDraft, onClose }: Email
       toast.error('Please connect your Google account first (use the Connect Gmail button in the dashboard header)')
       return
     }
+    if (!prospect.email) {
+      toast.error('This prospect has no verified email address yet. Run email discovery first.')
+      return
+    }
     setLoading(true)
     try {
       const { data: { session } } = await supabase.auth.getSession()
@@ -69,7 +73,7 @@ export default function EmailDraftModal({ prospect, emailDraft, onClose }: Email
           'Authorization': `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
-          to: prospect.author,
+          to: prospect.email,
           subject: email?.subject,
           body: email?.content,
         })
