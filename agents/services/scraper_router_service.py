@@ -12,9 +12,8 @@ Flow:
   5. Return merged, deduplicated results
 """
 
-import asyncio
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from services.llm_service import LLMService
 from services.playwright_scraper_service import PlaywrightScraperService

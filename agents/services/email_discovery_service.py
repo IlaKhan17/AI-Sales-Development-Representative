@@ -16,11 +16,11 @@ import os
 import re
 import smtplib
 import socket
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import List, Optional, Tuple
 
-import dns.resolver
 import aiohttp
+import dns.resolver
 
 logger = logging.getLogger(__name__)
 
@@ -43,17 +43,17 @@ class EmailCandidate:
 # ---------------------------------------------------------------------------
 
 PATTERNS = [
-    # rank, label, lambda(f, l, fi, li) -> local_part
-    (1,  "first.last",   lambda f, l, fi, li: f"{f}.{l}"),
-    (2,  "first",        lambda f, l, fi, li: f"{f}"),
-    (3,  "flast",        lambda f, l, fi, li: f"{fi}{l}"),
-    (4,  "firstlast",    lambda f, l, fi, li: f"{f}{l}"),
-    (5,  "last",         lambda f, l, fi, li: f"{l}"),
-    (6,  "first_last",   lambda f, l, fi, li: f"{f}_{l}"),
-    (7,  "f.last",       lambda f, l, fi, li: f"{fi}.{l}"),
-    (8,  "firstl",       lambda f, l, fi, li: f"{f}{li}"),
-    (9,  "lastfirst",    lambda f, l, fi, li: f"{l}{f}"),
-    (10, "last.first",   lambda f, l, fi, li: f"{l}.{f}"),
+    # rank, label, lambda(f, ln, fi, li) -> local_part
+    (1,  "first.last",   lambda f, ln, fi, li: f"{f}.{ln}"),
+    (2,  "first",        lambda f, ln, fi, li: f"{f}"),
+    (3,  "flast",        lambda f, ln, fi, li: f"{fi}{ln}"),
+    (4,  "firstlast",    lambda f, ln, fi, li: f"{f}{ln}"),
+    (5,  "last",         lambda f, ln, fi, li: f"{ln}"),
+    (6,  "first_last",   lambda f, ln, fi, li: f"{f}_{ln}"),
+    (7,  "f.last",       lambda f, ln, fi, li: f"{fi}.{ln}"),
+    (8,  "firstl",       lambda f, ln, fi, li: f"{f}{li}"),
+    (9,  "lastfirst",    lambda f, ln, fi, li: f"{ln}{f}"),
+    (10, "last.first",   lambda f, ln, fi, li: f"{ln}.{f}"),
 ]
 
 # Pattern confidence weights (how likely each pattern is to be used)
@@ -77,13 +77,13 @@ class EmailDiscoveryService:
     ) -> List[EmailCandidate]:
         """Generate all 10 email pattern candidates. Pure, no I/O."""
         f  = self._clean(first_name)
-        l  = self._clean(last_name)
+        ln = self._clean(last_name)
         fi = f[0] if f else ""
-        li = l[0] if l else ""
+        li = ln[0] if ln else ""
 
         candidates = []
         for rank, label, pattern_fn in PATTERNS:
-            local = pattern_fn(f, l, fi, li)
+            local = pattern_fn(f, ln, fi, li)
             if local:
                 candidates.append(EmailCandidate(
                     address=f"{local}@{domain}",

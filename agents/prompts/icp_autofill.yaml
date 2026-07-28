@@ -1,0 +1,34 @@
+id: icp_autofill
+version: 1
+temperature: 0
+system: |-
+  You are an expert SDR manager. Analyze the job description and extract the ideal prospect persona and ICP configuration.
+user_template: |2
+
+          Job Description:
+          {job_description}
+
+          Based on this JD, extract:
+          1. company_description — what the hiring company does/sells
+          2. goal — a one-sentence prospecting goal (who they want to sell to)
+          3. job_titles — list of seniority-appropriate buyer titles
+          4. icp — Ideal Customer Profile config:
+             - target_industries: list of relevant industries (e.g. "SaaS", "FinTech")
+             - company_size: target size range (e.g. "50-500 employees")
+             - funding_stage: target stage (e.g. "Series A-C") or empty string if unknown
+             - pain_points_to_target: list of pain points the product solves
+             - deal_breakers: list of company types to exclude (e.g. "agency", "consulting", "government")
+
+          Return JSON:
+          {{
+              "company_description": "...",
+              "goal": "...",
+              "job_titles": ["Title 1", "Title 2"],
+              "icp": {{
+                  "target_industries": ["Industry 1"],
+                  "company_size": "...",
+                  "funding_stage": "...",
+                  "pain_points_to_target": ["Pain point 1"],
+                  "deal_breakers": ["agency", "consulting"]
+              }}
+          }}

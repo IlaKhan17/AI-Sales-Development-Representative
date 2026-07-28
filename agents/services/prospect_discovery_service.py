@@ -10,16 +10,16 @@ Multi-source prospect discovery pipeline:
   5. Email discovery + verification for top prospects (NEW)
 """
 
-import logging
-import json
 import asyncio
-from typing import List, Dict, Any, Optional
+import json
+import logging
+from typing import Any, Dict, List, Optional
 
+from services.email_discovery_service import EmailDiscoveryService
 from services.llm_service import LLMService
-from services.web_search_service import WebSearchService
 from services.query_generator_service import QueryGeneratorService
 from services.scraper_router_service import ScraperRouterService
-from services.email_discovery_service import EmailDiscoveryService
+from services.web_search_service import WebSearchService
 
 logger = logging.getLogger(__name__)
 
@@ -32,22 +32,20 @@ class ProspectDiscoveryService:
         self.scraper_router = ScraperRouterService()
         self.email_discovery = EmailDiscoveryService()
 
-    async def discover_prospects(
+    async def gather_raw_candidates(
         self,
         company_description: str,
         goal: str,
         job_titles: List[str],
         enable_playwright: bool = True,
-        enable_email_discovery: bool = True,
         keyword_hint: str = "",
-        icp_config: Optional[Dict[str, Any]] = None,
     ) -> List[Dict[str, Any]]:
-        """
-        Discover prospects using multiple parallel sources:
-          - Google Search (existing)
-          - Reddit (existing)
-          - AI-selected Playwright scrapers (new)
-        Then score, enrich with emails, and return.
+        """Run the multi-source pipeline and return deduped RAW candidates
+        (source, title, url, snippet, and structured _name/_role/_company when
+        available) WITHOUT any LLM analysis or scoring.
+
+        Used by the v2 campaign pipeline, which does its own evidence-grounded
+        extraction + deterministic scoring.
         """
         preferences = {
             "company_description": company_description,
@@ -123,6 +121,30 @@ class ProspectDiscoveryService:
 
         unique_list = list(unique_map.values())
         logger.info(f"[Discovery] {len(unique_list)} unique prospects from all sources before LLM analysis")
+        return unique_list
+
+    async def discover_prospects(
+        self,
+        company_description: str,
+        goal: str,
+        job_titles: List[str],
+        enable_playwright: bool = True,
+        enable_email_discovery: bool = True,
+        keyword_hint: str = "",
+        icp_config: Optional[Dict[str, Any]] = None,
+    ) -> List[Dict[str, Any]]:
+        """
+        Legacy pipeline: gather raw candidates, then LLM-score, then enrich
+        with emails. (The v2 campaign pipeline uses gather_raw_candidates
+        directly and skips the LLM alignment scoring.)
+        """
+        unique_list = await self.gather_raw_candidates(
+            company_description=company_description,
+            goal=goal,
+            job_titles=job_titles,
+            enable_playwright=enable_playwright,
+            keyword_hint=keyword_hint,
+        )
 
         # ── LLM Analysis & Scoring ─────────────────────────────────────────
         analyzed = await self._analyze_prospects(unique_list, company_description, goal, icp_config)
@@ -139,7 +161,7 @@ class ProspectDiscoveryService:
     async def _run_google_reddit_search(
         self, preferences: Dict, goal: str, job_titles: List[str]
     ) -> List[Dict]:
-        import random, time
+        import random
 
         all_prospects = []
         try:

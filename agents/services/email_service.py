@@ -1,12 +1,24 @@
-from typing import Dict, List, Tuple, Any, Optional
-from langgraph.graph import StateGraph, END
-from .llm_service import LLMService
-from typing import TypedDict, Annotated
 import json
-from langchain_core.messages import SystemMessage, HumanMessage
-from datetime import datetime
+from typing import Any, Dict, List, Optional, TypedDict
 
+from langchain_core.messages import HumanMessage, SystemMessage
+from langgraph.graph import END, StateGraph
+
+from config import settings
+from core import run_recorder
+from core.errors import classify_exception
 from core.logger import logger
+from core.prompts import load_prompt, render
+from core.tracing import step_span
+
+from .llm_service import LLMService
+
+GRAPH_NAME = "outreach_email_draft"
+EMAIL_PROMPT_IDS = ["email_subject", "email_content", "email_refine", "email_final"]
+
+
+def _email_prompt_versions() -> Dict[str, int]:
+    return {pid: load_prompt(pid).version for pid in EMAIL_PROMPT_IDS}
 
 class ProspectData(TypedDict):
     author: str
@@ -17,15 +29,19 @@ class ProspectData(TypedDict):
     pain_points: List[str]
     solution_fit: str
     insights: str
+    approved_claims: List[str]
 
 class EmailState(TypedDict):
     subject: str
-    content: str 
+    content: str
     refined_content: str
     final_email: str
     prospect: ProspectData
     attempts: int
     should_continue: bool
+    run_id: Optional[str]
+    sender_name: Optional[str]
+    prompt_versions: Dict[str, int]
 
 class EmailDraft(TypedDict):
     prospect: ProspectData
@@ -41,16 +57,16 @@ class EmailService:
         """Creates the email workflow graph"""
         workflow = StateGraph(EmailState)
 
-        # Add nodes with async functions
-        workflow.add_node("create_subject", self.subject_agent)
-        workflow.add_node("build_content", self.content_builder_agent)
-        workflow.add_node("refine_content", self.content_refiner_agent)
-        workflow.add_node("create_final", self.final_draft_agent)
+        # Add nodes with async functions (wrapped with tracing step spans)
+        workflow.add_node("create_subject", self._traced("create_subject", self.subject_agent))
+        workflow.add_node("build_content", self._traced("build_content", self.content_builder_agent))
+        workflow.add_node("refine_content", self._traced("refine_content", self.content_refiner_agent))
+        workflow.add_node("create_final", self._traced("create_final", self.final_draft_agent))
 
         # Define edges
         workflow.add_edge("create_subject", "build_content")
         workflow.add_edge("build_content", "refine_content")
-        
+
         # Conditional edge for refinement loop
         workflow.add_conditional_edges(
             "refine_content",
@@ -66,38 +82,49 @@ class EmailService:
 
         return workflow.compile()
 
+    @staticmethod
+    def _format_approved_claims(claims: List[str]) -> str:
+        """Render approved claims as a bullet list for the content prompt."""
+        claims = [c for c in (claims or []) if c]
+        if not claims:
+            return "(none)"
+        return "\n".join(f"                  - {c}" for c in claims)
+
+    @staticmethod
+    def _traced(node_name: str, fn):
+        """Wrap a node so each execution is recorded as a step span."""
+        async def wrapper(state: "EmailState") -> "EmailState":
+            async with step_span(state.get("run_id"), node_name):
+                return await fn(state)
+        return wrapper
+
     async def subject_agent(self, state: EmailState) -> EmailState:
         """Agent responsible for creating email subject"""
         try:
-            messages = [
-                SystemMessage(content="""You are an expert email subject line writer for B2B sales.
-                Create a compelling subject line that references their pain points and Atlan's solution.
-                Respond in JSON format with a 'subject' field containing your subject line.
-                Keep it under 50 characters."""),
-                HumanMessage(content=f"""
-                Prospect Information:
-                Name: {state['prospect']['author']}
-                Role: {state['prospect']['role']}
-                Company: {state['prospect']['company']}
-                Pain Points: {', '.join(state['prospect']['pain_points'])}
-                Industry: {state['prospect']['industry']}
-                Solution Fit: {state['prospect']['solution_fit']}
-                Insights: {state['prospect']['insights']}
-                """)
-            ]
+            rp = render(
+                "email_subject",
+                author=state['prospect']['author'],
+                role=state['prospect']['role'],
+                company=state['prospect']['company'],
+                pain_points=', '.join(state['prospect']['pain_points']),
+                industry=state['prospect']['industry'],
+                solution_fit=state['prospect']['solution_fit'],
+                insights=state['prospect']['insights'],
+            )
+            messages = [SystemMessage(content=rp.system), HumanMessage(content=rp.user)]
 
             response = await self.llm_service.llm.ainvoke(messages)
-            
+
             # Clean the response
             cleaned_response = response.content.strip()
             if cleaned_response.startswith('```json'):
                 cleaned_response = cleaned_response.replace('```json', '').replace('```', '').strip()
             elif cleaned_response.startswith('```'):
                 cleaned_response = cleaned_response.replace('```', '').strip()
-            
+
             # Log the cleaned response for debugging
             logger.debug(f"Cleaned subject response: {cleaned_response}")
-            
+
             try:
                 state['subject'] = json.loads(cleaned_response)["subject"]
             except json.JSONDecodeError as e:
@@ -115,7 +142,7 @@ class EmailService:
                         state['subject'] = "Simplify Your Data Governance with Atlan"
                 else:
                     state['subject'] = "Simplify Your Data Governance with Atlan"
-            
+
             return state
 
         except Exception as e:
@@ -129,40 +156,34 @@ class EmailService:
     async def content_builder_agent(self, state: EmailState) -> EmailState:
         """Agent responsible for creating initial email content"""
         try:
-            messages = [
-                SystemMessage(content="""You are an expert B2B sales email writer.
-                Create personalized email content and respond in JSON format with a 'content' field.
-                The email should:
-                1. Show understanding of their pain points
-                2. Demonstrate how Atlan specifically solves their problems
-                3. Include relevant social proof
-                4. End with a clear call to action for a meeting
-                5. Keep it concise (max 150 words)"""),
-                HumanMessage(content=f"""
-                Prospect Information:
-                Name: {state['prospect']['author']}
-                Role: {state['prospect']['role']}
-                Company: {state['prospect']['company']}
-                Pain Points: {', '.join(state['prospect']['pain_points'])}
-                Industry: {state['prospect']['industry']}
-                Solution Fit: {state['prospect']['solution_fit']}
-                Insights: {state['prospect']['insights']}
-                Subject Line: {state['subject']}
-                """)
-            ]
+            rp = render(
+                "email_content",
+                author=state['prospect']['author'],
+                role=state['prospect']['role'],
+                company=state['prospect']['company'],
+                pain_points=', '.join(state['prospect']['pain_points']),
+                industry=state['prospect']['industry'],
+                solution_fit=state['prospect']['solution_fit'],
+                insights=state['prospect']['insights'],
+                subject=state['subject'],
+                approved_claims=self._format_approved_claims(
+                    state['prospect'].get('approved_claims', [])
+                ),
+            )
+            messages = [SystemMessage(content=rp.system), HumanMessage(content=rp.user)]
 
             response = await self.llm_service.llm.ainvoke(messages)
-            
+
             # Clean the response
             cleaned_response = response.content.strip()
             if cleaned_response.startswith('```json'):
                 cleaned_response = cleaned_response.replace('```json', '').replace('```', '').strip()
             elif cleaned_response.startswith('```'):
                 cleaned_response = cleaned_response.replace('```', '').strip()
-            
+
             # Log the cleaned response for debugging
             logger.debug(f"Cleaned content response: {cleaned_response}")
-            
+
             try:
                 state['content'] = json.loads(cleaned_response)["content"]
             except json.JSONDecodeError as e:
@@ -173,7 +194,7 @@ class EmailService:
                     state['content'] = cleaned_response
                 else:
                     state['content'] = f"Dear {state['prospect']['author']},\n\nI noticed your focus on {', '.join(state['prospect']['pain_points'])} at {state['prospect']['company']}. Atlan's data catalog and governance platform directly addresses these challenges with our comprehensive solution.\n\nCould we schedule a brief call to discuss how Atlan has helped similar companies in the {state['prospect']['industry']} industry?\n\nBest regards,\n[Your Name]\nSales Development Representative\nAtlan"
-            
+
             return state
 
         except Exception as e:
@@ -187,44 +208,25 @@ class EmailService:
     async def content_refiner_agent(self, state: EmailState) -> EmailState:
         """Agent responsible for refining email content"""
         try:
-            messages = [
-                SystemMessage(content="""You are an expert email editor. You MUST respond with valid JSON in the following format:
-                {
-                    "refined_content": "your refined email text here",
-                    "needs_another_iteration": false
-                }
-                
-                Important:
-                - Use proper JSON escaping for quotes and special characters
-                - Do not include any explanation text outside the JSON
-                - Ensure the JSON is properly formatted
-                
-                Your task is to refine the email content focusing on:
-                1. Improving clarity and conciseness
-                2. Ensuring professional tone
-                3. Optimizing persuasiveness
-                4. Maintaining natural flow"""),
-                HumanMessage(content=f"""
-                Current Email:
-                Subject: {state['subject']}
-                Content: {state['content']}
-                
-                Context:
-                Role: {state['prospect']['role']}
-                Industry: {state['prospect']['industry']}
-                """)
-            ]
+            rp = render(
+                "email_refine",
+                subject=state['subject'],
+                content=state['content'],
+                role=state['prospect']['role'],
+                industry=state['prospect']['industry'],
+            )
+            messages = [SystemMessage(content=rp.system), HumanMessage(content=rp.user)]
 
             response = await self.llm_service.llm.ainvoke(messages)
-            
+
             # Clean the response
             cleaned_response = response.content.strip()
             if cleaned_response.startswith('```json'):
                 cleaned_response = cleaned_response.replace('```json', '').replace('```', '').strip()
-            
+
             # Log the cleaned response for debugging
             logger.debug(f"Cleaned response: {cleaned_response}")
-            
+
             try:
                 result = json.loads(cleaned_response)
             except json.JSONDecodeError as e:
@@ -254,38 +256,29 @@ class EmailService:
     async def final_draft_agent(self, state: EmailState) -> EmailState:
         """Agent responsible for creating the final email draft"""
         try:
-            messages = [
-                SystemMessage(content="""You are an expert email formatter. 
-                Format the email with proper greeting, signature, and professional structure.
-                
-                RESPOND ONLY WITH THE FINAL EMAIL TEXT. 
-                DO NOT USE JSON FORMAT.
-                DO NOT ADD ANY ADDITIONAL EXPLANATION OR FORMATTING."""),
-                HumanMessage(content=f"""
-                Email Components:
-                Subject: {state['subject']}
-                Refined Content: {state['refined_content']}
-                
-                Prospect:
-                Name: {state['prospect']['author']}
-                Role: {state['prospect']['role']}
-                Company: {state['prospect']['company']}
-                
-                Sender Information:
-                Name: [Your Name]
-                Title: Sales Development Representative
-                Company: Atlan
-                """)
-            ]
+            sender_name = state.get("sender_name")
+            sender_name_line = (
+                f"                Name: {sender_name}\n" if sender_name else ""
+            )
+            rp = render(
+                "email_final",
+                subject=state['subject'],
+                refined_content=state['refined_content'],
+                author=state['prospect']['author'],
+                role=state['prospect']['role'],
+                company=state['prospect']['company'],
+                sender_name_line=sender_name_line,
+            )
+            messages = [SystemMessage(content=rp.system), HumanMessage(content=rp.user)]
 
             response = await self.llm_service.llm.ainvoke(messages)
-            
+
             # Simply use the raw response content without JSON parsing
             state['final_email'] = response.content.strip()
-            
+
             # Log for debugging
             logger.debug(f"Final email content: {state['final_email']}")
-            
+
             return state
 
         except Exception as e:
@@ -296,8 +289,23 @@ class EmailService:
             state['final_email'] = state.get('refined_content', '')
             return state
 
-    async def process(self, prospect: Dict) -> EmailDraft:
+    async def process(
+        self,
+        prospect: Dict,
+        sender_name: Optional[str] = None,
+        user_id: Optional[str] = None,
+        workspace_id: Optional[str] = None,
+    ) -> EmailDraft:
         """Process a single prospect through the workflow"""
+        prompt_versions = _email_prompt_versions()
+        run_id = run_recorder.start_run(
+            GRAPH_NAME,
+            user_id=user_id,
+            workspace_id=workspace_id,
+            trigger="api",
+            model=settings.MODEL_NAME,
+            prompt_versions=prompt_versions,
+        )
         try:
             # Sanitize and validate prospect data
             sanitized_prospect = {
@@ -308,7 +316,8 @@ class EmailService:
                 "industry": prospect.get("industry", ""),
                 "pain_points": prospect.get("pain_points", []),
                 "solution_fit": prospect.get("solution_fit", ""),
-                "insights": prospect.get("insights", "")
+                "insights": prospect.get("insights", ""),
+                "approved_claims": prospect.get("approved_claims", []),
             }
 
             initial_state: EmailState = {
@@ -318,11 +327,15 @@ class EmailService:
                 "final_email": "",
                 "prospect": sanitized_prospect,
                 "attempts": 0,
-                "should_continue": True
+                "should_continue": True,
+                "run_id": run_id,
+                "sender_name": sender_name,
+                "prompt_versions": prompt_versions,
             }
 
             final_state = await self.workflow.ainvoke(initial_state)
-            
+
+            run_recorder.finish_run(run_id, "completed")
             return {
                 "prospect": sanitized_prospect,
                 "email": {
@@ -334,6 +347,9 @@ class EmailService:
         except Exception as e:
             logger.error(f"Error processing email for prospect: {str(e)}")
             logger.error(f"Prospect data: {prospect}")
+            run_recorder.finish_run(
+                run_id, "failed", error=str(e), error_class=classify_exception(e).value
+            )
             raise
 
     async def process_with_streaming(self, prospect: Dict):
@@ -354,7 +370,8 @@ class EmailService:
                 "industry": prospect.get("industry", ""),
                 "pain_points": prospect.get("pain_points", []),
                 "solution_fit": prospect.get("solution_fit", ""),
-                "insights": prospect.get("insights", "")
+                "insights": prospect.get("insights", ""),
+                "approved_claims": prospect.get("approved_claims", []),
             }
 
             initial_state: EmailState = {
@@ -364,7 +381,10 @@ class EmailService:
                 "final_email": "",
                 "prospect": sanitized_prospect,
                 "attempts": 0,
-                "should_continue": True
+                "should_continue": True,
+                "run_id": None,
+                "sender_name": None,
+                "prompt_versions": _email_prompt_versions(),
             }
 
             async for stream_type, chunk in self.workflow.astream(
@@ -383,26 +403,26 @@ class EmailService:
             logger.error(f"Error in streaming process: {str(e)}")
             logger.error(f"Prospect data: {prospect}")
             yield "error", {"error": str(e)}
-    
+
     def _format_chunk_data(self, chunk_data: Any, stage_structure: Dict) -> Dict:
         """Format chunk data according to the stage structure"""
         if isinstance(chunk_data, (str, int, float, bool)):
             return chunk_data
-        
+
         if isinstance(chunk_data, (list, tuple)):
             return list(chunk_data)
-        
+
         if isinstance(chunk_data, dict):
             return chunk_data
-        
+
         if hasattr(chunk_data, '__dict__'):
             return chunk_data.__dict__
-        
+
         return str(chunk_data)
 
     async def send_email(self, email_drafts: List[Dict]):
         """Method to send the drafted emails"""
-        
+
         # TODO: Implement email sending functionality
         # This would integrate with your email service provider
-        pass 
+        pass

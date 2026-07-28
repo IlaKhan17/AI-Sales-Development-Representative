@@ -1,12 +1,11 @@
-from pinecone import Pinecone, ServerlessSpec
-import requests
-from typing import Dict, List, Any, Literal
 import json
 import logging
-import re
-import time
 import os
+import time
+from typing import Any, Dict, List
+
 from openai import AsyncOpenAI
+from pinecone import Pinecone, ServerlessSpec
 
 logger = logging.getLogger(__name__)
 
@@ -15,12 +14,12 @@ class VectorService:
     def __init__(self):
         self.pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
         self.openai_client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-        
+
         self.index_name = "meetings-index"
-        
+
         # OpenAI text-embedding-3-small dimension
         self.dimension = 1536
-        
+
         if not self.pc.has_index(self.index_name):
             self.pc.create_index(
                 name=self.index_name,
@@ -31,21 +30,21 @@ class VectorService:
                     region="us-east-1"
                 )
             )
-        
+
         self.index = self.pc.Index(self.index_name)
-        
+
     def _chunk_text(self, text: str, chunk_size: int = 1000, overlap: int = 200) -> List[str]:
         """Split text into overlapping chunks suitable for embedding"""
         logger.info(f"Chunking text of length {len(text)}")
         if len(text) <= chunk_size:
             return [text]
-            
+
         chunks = []
         start = 0
         while start < len(text):
             # Find a good break point (sentence end or paragraph)
             end = min(start + chunk_size, len(text))
-            
+
             # Try to end at sentence boundary if within the overlap
             if end < len(text):
                 sentence_end = max(
@@ -54,36 +53,69 @@ class VectorService:
                     text.rfind('! ', start, end),
                     text.rfind('\n\n', start, end)
                 )
-                
+
                 if sentence_end > start + (chunk_size - overlap):
                     end = sentence_end + 2  # Include the period and space
-            
+
             chunks.append(text[start:end])
             start = end - overlap
-        
-        logger.info(f"Text split into {len(chunks)} chunks")    
+
+        logger.info(f"Text split into {len(chunks)} chunks")
         return chunks
-                
+
     async def create_embedding(self, text: str) -> List[float]:
         """Create embedding using OpenAI text-embedding-3-small"""
         try:
             logger.info(f"Creating embedding for text (length: {len(text)}) starting with: {text[:50]}...")
-            
+
             response = await self.openai_client.embeddings.create(
                 input=text,
                 model="text-embedding-3-small"
             )
-            
+
             embedding_vector = response.data[0].embedding
-            
+
             logger.info(f"Successfully created embedding of dimension {len(embedding_vector)}")
             return embedding_vector
-            
+
         except Exception as e:
             # Never substitute a fake vector: a random embedding would be
             # upserted as if real and permanently corrupt search results.
             logger.error(f"Error creating embedding: {str(e)}")
             raise
+
+    # ── generic namespace-scoped helpers (used by knowledge_service) ──
+
+    def chunk_text(self, text: str, chunk_size: int = 1000, overlap: int = 200) -> List[str]:
+        """Public chunking helper (same algorithm used for meeting transcripts)."""
+        return self._chunk_text(text, chunk_size=chunk_size, overlap=overlap)
+
+    def upsert_chunks(self, namespace: str, vectors: List[Dict[str, Any]], batch_size: int = 50) -> None:
+        """Upsert pre-built vectors ({id, values, metadata}) into a namespace."""
+        for i in range(0, len(vectors), batch_size):
+            self.index.upsert(vectors=vectors[i : i + batch_size], namespace=namespace)
+
+    def query(
+        self,
+        namespace: str,
+        vector: List[float],
+        top_k: int = 5,
+        filter: Dict[str, Any] | None = None,
+    ):
+        """Query a namespace; returns Pinecone matches."""
+        results = self.index.query(
+            vector=vector,
+            top_k=top_k,
+            include_metadata=True,
+            namespace=namespace,
+            filter=filter or None,
+        )
+        return results.matches
+
+    def delete_vectors(self, namespace: str, ids: List[str]) -> None:
+        """Delete vectors by id from a namespace."""
+        if ids:
+            self.index.delete(ids=ids, namespace=namespace)
 
     async def store_meeting_data(self, meeting_data: Dict[str, Any], user_id: str):
         """Store meeting data in Pinecone using chunking for large transcripts and user_id for namespace"""
@@ -106,74 +138,74 @@ class VectorService:
                 "insights": json.dumps(meeting_data.get("insights", []))
             }
             logger.info(f"Base metadata: {base_metadata}")
-            
+
             # Get full transcript
             transcript = meeting_data.get("transcript", "")
             if not transcript:
                 logger.warning("No transcript found in meeting data")
                 transcript = "No transcript available"
-            
+
             # Chunk the transcript
             logger.info("Starting transcript chunking")
             chunks = self._chunk_text(transcript)
             logger.info(f"Split transcript into {len(chunks)} chunks")
-            
+
             # Batch vectors for upsert
             vectors_to_upsert = []
-            
+
             # Store only up to 5 chunks for testing to prevent overload
             max_chunks = min(5, len(chunks))
             logger.info(f"Processing {max_chunks} chunks (limited for testing)")
-            
+
             # Store chunks with embeddings
             for i in range(max_chunks):
                 chunk = chunks[i]
                 logger.info(f"Processing chunk {i+1}/{max_chunks}")
-                
+
                 # Create embedding for this chunk
                 logger.info(f"Creating embedding for chunk {i}")
                 chunk_embedding = await self.create_embedding(chunk)
                 logger.info(f"Created embedding for chunk {i}")
-                
+
                 # Create chunk-specific metadata
                 chunk_metadata = base_metadata.copy()
                 chunk_metadata["chunk_index"] = i
                 chunk_metadata["chunk_count"] = len(chunks)
                 chunk_metadata["chunk_text"] = chunk[:500]  # Store limited preview of the chunk
-                
+
                 # Add to upsert batch
                 vectors_to_upsert.append({
                     "id": f"meeting_{base_metadata['meeting_id']}_chunk_{i}",
                     "values": chunk_embedding,
                     "metadata": chunk_metadata
                 })
-                
+
                 # Add a small delay to prevent rate limiting
                 time.sleep(0.5)
-            
+
             # Store summary embedding separately for high-level search
             if meeting_data.get("ai_summary"):
                 logger.info("Creating embedding for summary")
                 summary_embedding = await self.create_embedding(meeting_data["ai_summary"])
                 logger.info("Successfully created embedding for summary")
-                
+
                 summary_metadata = base_metadata.copy()
                 summary_metadata["content_type"] = "summary"
-                
+
                 vectors_to_upsert.append({
                     "id": f"meeting_{base_metadata['meeting_id']}_summary",
                     "values": summary_embedding,
                     "metadata": summary_metadata
                 })
-            
+
             # Upsert in smaller batches to prevent timeouts
             batch_size = 2  # Smaller batch size for testing
             logger.info(f"Upserting vectors in batches of {batch_size}")
-            
+
             for i in range(0, len(vectors_to_upsert), batch_size):
                 batch = vectors_to_upsert[i:i + batch_size]
                 logger.info(f"Upserting batch {i//batch_size + 1}/{(len(vectors_to_upsert) + batch_size - 1)//batch_size}")
-                
+
                 try:
                     self.index.upsert(
                         vectors=batch,
@@ -182,12 +214,12 @@ class VectorService:
                     logger.info(f"Successfully upserted batch {i//batch_size + 1} to namespace {user_id}")
                 except Exception as e:
                     logger.error(f"Error upserting batch {i//batch_size + 1}: {str(e)}")
-                
+
                 # Add delay between batches to prevent rate limiting
                 time.sleep(1)
-            
+
             logger.info(f"Completed storing meeting {base_metadata['meeting_id']} with {len(vectors_to_upsert)} vectors in Pinecone namespace {user_id}")
-            
+
         except Exception as e:
             logger.error(f"Error storing meeting data: {str(e)}")
             raise
@@ -197,13 +229,13 @@ class VectorService:
         try:
             if not user_id:
                 raise ValueError("user_id is required for searching meetings")
-                
+
             query_embedding = await self.create_embedding(query)
-            
+
             filter_dict = {}
             if meeting_id:
                 filter_dict["meeting_id"] = meeting_id
-            
+
             results = self.index.query(
                 vector=query_embedding,
                 top_k=top_k,
@@ -211,47 +243,47 @@ class VectorService:
                 namespace=user_id,
                 filter=filter_dict if filter_dict else None
             )
-            
+
             return results.matches
-            
+
         except Exception as e:
             logger.error(f"Error searching meetings: {str(e)}")
             raise
-            
+
     async def generate_rag_response(self, query: str, llm_service, user_id: str, meeting_id: str = None, top_k: int = 5) -> Dict[str, Any]:
         """
         Generate a RAG-based response to a query about meetings
-        
+
         Args:
             query: The user's question
             llm_service: An instance of LLMService to use for generation
             user_id: The user ID to namespace the search
             meeting_id: Optional meeting ID to filter results
             top_k: Number of relevant chunks to retrieve
-            
+
         Returns:
             Dictionary with response and source information
         """
         try:
             # Step 1: Retrieve relevant meeting chunks
             search_results = await self.search_meetings(query, user_id, meeting_id, top_k=top_k)
-            
+
             if not search_results:
                 return {
                     "answer": "I couldn't find any relevant meeting information for your query.",
                     "sources": []
                 }
-            
+
             # Step 2: Prepare context from search results
             context_chunks = []
             sources = []
             meeting_metadata = {}
-            
+
             # First pass to gather all metadata about meetings
             for result in search_results:
                 metadata = result.metadata
                 meeting_id_meta = metadata.get("meeting_id")
-                
+
                 if meeting_id_meta and meeting_id_meta not in meeting_metadata:
                     meeting_metadata[meeting_id_meta] = {
                         "meeting_id": meeting_id_meta,
@@ -263,26 +295,26 @@ class VectorService:
                         "score": result.score,
                         "chunks": []
                     }
-                    
+
                     # Try to parse action items, topics and insights if available
                     try:
                         if "action_items" in metadata:
                             meeting_metadata[meeting_id_meta]["action_items"] = json.loads(metadata.get("action_items", "[]"))
                     except (ValueError, TypeError):
                         meeting_metadata[meeting_id_meta]["action_items"] = []
-                        
+
                     try:
                         if "main_topics" in metadata:
                             meeting_metadata[meeting_id_meta]["main_topics"] = json.loads(metadata.get("main_topics", "[]"))
                     except (ValueError, TypeError):
                         meeting_metadata[meeting_id_meta]["main_topics"] = []
-                        
+
                     try:
                         if "insights" in metadata:
                             meeting_metadata[meeting_id_meta]["insights"] = json.loads(metadata.get("insights", "[]"))
                     except (ValueError, TypeError):
                         meeting_metadata[meeting_id_meta]["insights"] = []
-                
+
                 # Add the chunk text to the meeting data
                 if meeting_id_meta and "chunk_text" in metadata:
                     meeting_metadata[meeting_id_meta]["chunks"].append({
@@ -290,7 +322,7 @@ class VectorService:
                         "score": result.score,
                         "index": metadata.get("chunk_index", 0)
                     })
-            
+
             # Second pass to build formatted context
             for mid, meeting in meeting_metadata.items():
                 # Add to sources list for return value
@@ -301,22 +333,22 @@ class VectorService:
                     "score": meeting["score"]
                 }
                 sources.append(source)
-                
+
                 # Build rich context for this meeting
                 meeting_context = [
                     f"Meeting: {meeting['title']} (ID: {meeting['meeting_id']})",
                     f"Date: {meeting['date']}",
                 ]
-                
+
                 if meeting.get("participants"):
                     if isinstance(meeting["participants"], list):
                         meeting_context.append(f"Participants: {', '.join(meeting['participants'])}")
                     else:
                         meeting_context.append(f"Participants: {meeting['participants']}")
-                
+
                 if meeting.get("summary"):
                     meeting_context.append(f"Summary: {meeting['summary']}")
-                
+
                 # Add action items if available
                 if meeting.get("action_items") and len(meeting["action_items"]) > 0:
                     action_items = meeting["action_items"]
@@ -324,7 +356,7 @@ class VectorService:
                         meeting_context.append("Action Items:")
                         for item in action_items:
                             meeting_context.append(f"- {item}")
-                
+
                 # Add main topics if available
                 if meeting.get("main_topics") and len(meeting["main_topics"]) > 0:
                     topics = meeting["main_topics"]
@@ -332,7 +364,7 @@ class VectorService:
                         meeting_context.append("Main Topics:")
                         for topic in topics:
                             meeting_context.append(f"- {topic}")
-                
+
                 # Add insights if available
                 if meeting.get("insights") and len(meeting["insights"]) > 0:
                     insights = meeting["insights"]
@@ -340,25 +372,22 @@ class VectorService:
                         meeting_context.append("Insights:")
                         for insight in insights:
                             meeting_context.append(f"- {insight}")
-                
+
                 # Add transcript excerpts
                 if meeting.get("chunks") and len(meeting["chunks"]) > 0:
-                    # Sort chunks by index
-                    sorted_chunks = sorted(meeting["chunks"], key=lambda x: x.get("index", 0))
-                    
-                    # Add the first 2 highest scoring chunks
+                    # Add the 2 highest scoring chunks
                     best_chunks = sorted(meeting["chunks"], key=lambda x: x.get("score", 0), reverse=True)[:2]
                     if best_chunks:
                         meeting_context.append("Relevant Transcript Excerpts:")
                         for chunk in best_chunks:
                             meeting_context.append(f"[Excerpt] {chunk['text']}")
-                
+
                 # Add the complete context for this meeting to the overall context
                 context_chunks.append("\n".join(meeting_context))
-            
+
             # Step 3: Generate response
             context = "\n\n---\n\n".join(context_chunks)
-            
+
             system_prompt = """You are a helpful assistant with access to a knowledge base of meeting transcripts and summaries.
 Your task is to answer questions based on the context provided below.
 
@@ -385,12 +414,12 @@ Please provide a comprehensive answer based only on the information in the conte
                 system_prompt=system_prompt,
                 user_prompt=user_prompt
             )
-            
+
             return {
                 "answer": answer,
                 "sources": sources[:3]  # Limit to top 3 sources
             }
-            
+
         except Exception as e:
             logger.error(f"Error generating RAG response: {str(e)}")
             return {

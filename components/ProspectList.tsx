@@ -24,7 +24,8 @@ import ProspectModal, { Prospect } from './ProspectModal';
 import ProspectPreferencesForm from './ProspectPreferencesForm';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { createClient } from '@/utils/supabase/client';
+import { apiFetch, ApiError } from '@/lib/api';
+import type { DiscoveryJob, DiscoveryJobProspectsResponse } from '@/lib/api-types';
 // import { formatDistanceToNow } from 'date-fns';
 
 function timeAgo(dateString: string) {
@@ -49,14 +50,6 @@ type ProspectListProps = {
   initialProspects: Prospect[];
 };
 
-type DiscoveryJob = {
-  id: string; // The search_query acting as ID
-  name: string;
-  date: string;
-  prospect_count: number;
-  companies: string[];
-}
-
 export default function ProspectList({ initialProspects }: ProspectListProps) {
   // State for Prospects
   const [prospects, setProspects] = useState<Prospect[]>(initialProspects);
@@ -77,21 +70,11 @@ export default function ProspectList({ initialProspects }: ProspectListProps) {
     fetchJobs();
   }, []);
 
-  const getAuthHeaders = async (): Promise<Record<string, string>> => {
-    const supabase = createClient();
-    const { data: { session } } = await supabase.auth.getSession();
-    return session ? { Authorization: `Bearer ${session.access_token}` } : {};
-  };
-
   const fetchJobs = async () => {
     setLoadingJobs(true);
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-      const response = await fetch(`${apiUrl}/discovery-jobs`, { headers: await getAuthHeaders() });
-      if (response.ok) {
-        const data = await response.json();
-        setJobs(data);
-      }
+      const data = await apiFetch<DiscoveryJob[]>('/discovery-jobs');
+      setJobs(data);
     } catch (error) {
       console.error("Error fetching jobs:", error);
     } finally {
@@ -103,20 +86,17 @@ export default function ProspectList({ initialProspects }: ProspectListProps) {
     setSelectedJobId(jobId);
     setLoading(true);
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
       // Encode the ID since it might contain spaces/special chars (as it is the goal string)
       const encodedId = encodeURIComponent(jobId);
-      const response = await fetch(`${apiUrl}/discovery-jobs/${encodedId}/prospects`, { headers: await getAuthHeaders() });
-
-      if (response.ok) {
-        const data = await response.json();
-        setProspects(data.prospects || []);
-      } else {
-        toast.error("Failed to load prospects for this project.");
-      }
+      const data = await apiFetch<DiscoveryJobProspectsResponse>(`/discovery-jobs/${encodedId}/prospects`);
+      setProspects(data.prospects || []);
     } catch (error) {
       console.error("Error fetching job prospects:", error);
-      toast.error("Error loading project.");
+      if (error instanceof ApiError) {
+        toast.error("Failed to load prospects for this project.");
+      } else {
+        toast.error("Error loading project.");
+      }
     } finally {
       setLoading(false);
     }
@@ -139,14 +119,9 @@ export default function ProspectList({ initialProspects }: ProspectListProps) {
   }) => {
     setLoading(true);
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-      const response = await fetch(`${apiUrl}/prospects/discover`, {
+      const data = await apiFetch<DiscoveryJobProspectsResponse>('/prospects/discover', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(await getAuthHeaders()),
-        },
-        body: JSON.stringify({
+        body: {
           company_description: preferences.company_description,
           goal: preferences.goal,
           job_titles: preferences.job_titles,
@@ -154,14 +129,8 @@ export default function ProspectList({ initialProspects }: ProspectListProps) {
           enable_email_discovery: preferences.enable_email_discovery ?? true,
           keyword_hint: preferences.keyword_hint ?? '',
           icp: preferences.icp ?? null,
-        }),
+        },
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to discover prospects');
-      }
-
-      const data = await response.json();
       if (data.prospects && data.prospects.length > 0) {
         setProspects(data.prospects);
         toast.success(`Found ${data.prospects.length} new prospects!`);

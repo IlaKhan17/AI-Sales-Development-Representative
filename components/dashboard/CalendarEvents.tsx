@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { createClient } from "@/utils/supabase/client";
+import { apiFetch } from "@/lib/api";
+import type { CalendarEvent, CalendarEventsResponse, GoogleStatus } from "@/lib/api-types";
 import { Button } from "@/components/ui/button";
 import {
     Card,
@@ -31,18 +32,6 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-type CalendarEvent = {
-    id: string;
-    summary: string;
-    description: string;
-    start: string;
-    end: string;
-    location: string;
-    htmlLink: string;
-    attendees: { email: string; status: string }[];
-    meetLink?: string;
-};
-
 type NewEvent = {
     summary: string;
     start_time: string;
@@ -67,33 +56,16 @@ export function CalendarEvents() {
         location: "",
     });
 
-    const supabase = createClient();
-    const apiUrl =
-        process.env.NEXT_PUBLIC_API_URL ||
-        "https://ai-sdr-production-afd7.up.railway.app";
-
     useEffect(() => {
         fetchEvents();
     }, []);
 
-    const getSession = async () => {
-        const {
-            data: { session },
-        } = await supabase.auth.getSession();
-        return session;
-    };
-
     const fetchEvents = async () => {
         try {
             setLoading(true);
-            const session = await getSession();
-            if (!session) return;
 
             // Check connection status first
-            const statusRes = await fetch(`${apiUrl}/auth/google/status`, {
-                headers: { Authorization: `Bearer ${session.access_token}` },
-            });
-            const statusData = await statusRes.json();
+            const statusData = await apiFetch<GoogleStatus>("/auth/google/status");
             setConnected(statusData.connected);
 
             if (!statusData.connected) {
@@ -101,13 +73,10 @@ export function CalendarEvents() {
                 return;
             }
 
-            const res = await fetch(`${apiUrl}/calendar/events?max_results=15`, {
-                headers: { Authorization: `Bearer ${session.access_token}` },
-            });
-            if (res.ok) {
-                const data = await res.json();
-                setEvents(data.events || []);
-            }
+            const data = await apiFetch<CalendarEventsResponse>(
+                "/calendar/events?max_results=15"
+            );
+            setEvents(data.events || []);
         } catch (error) {
             console.error("Error fetching calendar events:", error);
         } finally {
@@ -123,8 +92,6 @@ export function CalendarEvents() {
 
         try {
             setCreating(true);
-            const session = await getSession();
-            if (!session) return;
 
             const payload = {
                 summary: newEvent.summary,
@@ -140,21 +107,11 @@ export function CalendarEvents() {
                     : [],
             };
 
-            const res = await fetch(`${apiUrl}/calendar/events`, {
+            await apiFetch("/calendar/events", {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${session.access_token}`,
-                },
-                body: JSON.stringify(payload),
+                body: payload,
             });
 
-            if (!res.ok) {
-                const err = await res.json();
-                throw new Error(err.detail || "Failed to create event");
-            }
-
-            const data = await res.json();
             toast.success("Meeting scheduled successfully!");
             setShowCreateDialog(false);
             setNewEvent({

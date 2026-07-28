@@ -25,23 +25,10 @@ import {
 } from '@/components/ui/accordion';
 import { MeetingSearch } from './MeetingSearch';
 import { cn } from '@/lib/utils';
-import { createClient } from '@/utils/supabase/client';
+import { apiFetch } from '@/lib/api';
+import type { AddBotResponse, Meeting, MeetingsResponse } from '@/lib/api-types';
 
-export type Meeting = {
-  id: string;
-  bot_id: string;
-  meeting_url: string;
-  status?: 'active' | 'completed';
-  date?: string;
-  title?: string;
-  duration?: string;
-  description?: string;
-  participants?: string[];
-  transcript?: string;
-  ai_summary?: string;
-  action_items?: string | string[];
-  insights?: string | string[];
-};
+export type { Meeting };
 
 type MeetingData = {
   transcript: string;
@@ -61,12 +48,6 @@ export function MeetingNotes({ initialMeetings }: { initialMeetings: Meeting[] }
   const [meetingTitle, setMeetingTitle] = useState('');
   const [refreshing, setRefreshing] = useState(false);
 
-  const getAccessToken = async () => {
-    const supabase = createClient();
-    const { data: { session } } = await supabase.auth.getSession();
-    return session?.access_token ?? null;
-  };
-
   const addBot = async () => {
     setLoading(true);
     try {
@@ -74,27 +55,13 @@ export function MeetingNotes({ initialMeetings }: { initialMeetings: Meeting[] }
         meeting_url: meetingUrl,
         title: meetingTitle,
       };
-      const token = await getAccessToken();
-      if (!token) {
-        toast.error('Please sign in first');
-        return;
-      }
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://ai-sdr-production-afd7.up.railway.app';
-      const response = await fetch(`${apiUrl}/add-bot`, {
+      const data = await apiFetch<AddBotResponse>('/add-bot', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
+        body: {
           title: meetingData.title,
           meeting_url: meetingData.meeting_url,
-        }),
+        },
       });
-      if (!response.ok) {
-        throw new Error('Failed to add bot');
-      }
-      const data = await response.json();
       console.log(data.meeting.botId);
       const newMeeting: Meeting = {
         id: data.meeting.id,
@@ -121,23 +88,10 @@ export function MeetingNotes({ initialMeetings }: { initialMeetings: Meeting[] }
 
   const removeBot = async (meeting: Meeting) => {
     try {
-      const token = await getAccessToken();
-      if (!token) {
-        toast.error('Please sign in first');
-        return;
-      }
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://ai-sdr-production-afd7.up.railway.app';
-      const response = await fetch(`${apiUrl}/remove-bot`, {
+      await apiFetch('/remove-bot', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify(meeting),
+        body: meeting,
       });
-      if (!response.ok) {
-        throw new Error('Failed to delete bot');
-      }
 
       // Update the state to remove the meeting from the list
       setMeetings(meetings.filter((m) => m.id !== meeting.id));
@@ -209,25 +163,7 @@ export function MeetingNotes({ initialMeetings }: { initialMeetings: Meeting[] }
   const refreshCompletedMeetings = async () => {
     setRefreshing(true);
     try {
-      const token = await getAccessToken();
-      if (!token) {
-        toast.error('Please sign in first');
-        return;
-      }
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://ai-sdr-production-afd7.up.railway.app';
-      const response = await fetch(`${apiUrl}/meetings`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch completed meetings');
-      }
-
-      const data = await response.json();
+      const data = await apiFetch<MeetingsResponse>('/meetings');
 
       if (data?.meetings) {
         // Merge new meetings with existing active ones

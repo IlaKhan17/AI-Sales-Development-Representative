@@ -6,20 +6,8 @@ import { Loader2, Search, BrainCircuit, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
-import { createClient } from '@/utils/supabase/client';
-
-type MeetingSource = {
-  meeting_id: string;
-  title: string;
-  date: string;
-  score: number;
-};
-
-type SearchResult = {
-  status: string;
-  response: string;
-  sources: MeetingSource[];
-};
+import { apiFetch } from '@/lib/api';
+import type { KnowledgeBaseSearchResult as SearchResult } from '@/lib/api-types';
 
 export function MeetingSearch() {
   const [query, setQuery] = useState('');
@@ -35,32 +23,13 @@ export function MeetingSearch() {
 
     setLoading(true);
     try {
-      const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
-
-      if (!session) {
-        toast.error('Please verify you are logged in');
-        return;
-      }
-
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://ai-sdr-production-afd7.up.railway.app';
-      const response = await fetch(`${apiUrl}/search-knowledge-base`, {
+      const data = await apiFetch<SearchResult>('/search-knowledge-base', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`
-        },
-        body: JSON.stringify({
+        body: {
           query: query,
           max_results: 5,
-        }),
+        },
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to search knowledge base');
-      }
-
-      const data = await response.json();
       setSearchResult(data);
     } catch (error) {
       console.error('Error searching knowledge base:', error);

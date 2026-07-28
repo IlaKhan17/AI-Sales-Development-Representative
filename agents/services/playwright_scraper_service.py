@@ -15,7 +15,7 @@ import random
 import re
 from typing import Any, Dict, List, Optional
 
-from playwright.async_api import async_playwright, Browser, BrowserContext, Page
+from playwright.async_api import Browser, BrowserContext, async_playwright
 
 logger = logging.getLogger(__name__)
 
@@ -242,7 +242,7 @@ class PlaywrightScraperService:
         try:
             page = await ctx.new_page()
             # Search HN for the latest hiring thread
-            search_url = f"https://hn.algolia.com/api/v1/search?query=Who+is+Hiring&tags=story,author_whoishiring&hitsPerPage=1"
+            search_url = "https://hn.algolia.com/api/v1/search?query=Who+is+Hiring&tags=story,author_whoishiring&hitsPerPage=1"
             await page.goto(search_url, wait_until="domcontentloaded", timeout=15000)
             content = await page.content()
 
@@ -275,7 +275,7 @@ class PlaywrightScraperService:
                         continue
 
                     # First line is usually "Company | Role | Location | Remote/Onsite"
-                    lines  = [l.strip() for l in text.split("\n") if l.strip()]
+                    lines  = [ln.strip() for ln in text.split("\n") if ln.strip()]
                     first  = lines[0] if lines else ""
                     parts  = [p.strip() for p in first.split("|")]
                     company = parts[0] if parts else ""
@@ -384,7 +384,7 @@ class PlaywrightScraperService:
                     href    = await link_el.get_attribute("href") if link_el else ""
                     full_url = f"https://www.crunchbase.com{href}" if href and href.startswith("/") else href
 
-                    lines = [l.strip() for l in text.split("\n") if l.strip()]
+                    lines = [ln.strip() for ln in text.split("\n") if ln.strip()]
                     name    = lines[0] if lines else text[:80]
                     snippet = " | ".join(lines[1:3]) if len(lines) > 1 else ""
 
