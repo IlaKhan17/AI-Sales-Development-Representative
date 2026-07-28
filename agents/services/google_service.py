@@ -1,20 +1,17 @@
-import os
-import json
-import logging
-from datetime import datetime, timezone, timedelta
-from typing import Optional, Dict, List, Any
-
-from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import Flow
-from google.auth.transport.requests import Request
-from googleapiclient.discovery import build
-
 import base64
-from email.mime.text import MIMEText
+import logging
+import os
+from datetime import datetime, timezone
 from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from typing import Any, Dict, List, Optional
 
 from dotenv import load_dotenv
-from supabase import create_client, Client
+from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import Flow
+from googleapiclient.discovery import build
+from supabase import Client, create_client
 
 load_dotenv()
 
@@ -77,7 +74,7 @@ class GoogleService:
     async def exchange_code(self, code: str, user_id: str) -> Dict[str, Any]:
         """Exchange authorization code for tokens and store them."""
         print(f"\n[GoogleService] exchange_code called for user: {user_id}")
-        
+
         try:
             flow = Flow.from_client_config(
                 {
@@ -93,10 +90,10 @@ class GoogleService:
                 redirect_uri=GOOGLE_REDIRECT_URI,
             )
             print("[GoogleService] Flow created successfully")
-            
+
             flow.fetch_token(code=code)
             print("[GoogleService] Token fetched successfully")
-            
+
             credentials = flow.credentials
             print(f"[GoogleService] Got credentials, has refresh_token: {credentials.refresh_token is not None}")
 
@@ -126,9 +123,9 @@ class GoogleService:
             logger.info(f"Stored Google tokens for user {user_id} ({email})")
             print(f"[GoogleService] SUCCESS - Tokens stored for {email}")
             return {"email": email, "connected": True}
-        
+
         except Exception as e:
-            print(f"\n[GoogleService] ERROR in exchange_code:")
+            print("\n[GoogleService] ERROR in exchange_code:")
             print(f"Error type: {type(e).__name__}")
             print(f"Error message: {str(e)}")
             import traceback
@@ -417,6 +414,35 @@ class GoogleService:
             )
 
         return events
+
+    async def get_busy_times(
+        self,
+        user_id: str,
+        start_iso: str,
+        end_iso: str,
+    ) -> List[Dict[str, str]]:
+        """Return busy intervals [{start, end}] on the primary calendar
+        between two ISO timestamps, via the freebusy API."""
+        creds = await self.get_credentials(user_id)
+        if not creds:
+            raise ValueError("Google account not connected.")
+
+        service = build("calendar", "v3", credentials=creds)
+        result = (
+            service.freebusy()
+            .query(
+                body={
+                    "timeMin": start_iso,
+                    "timeMax": end_iso,
+                    "items": [{"id": "primary"}],
+                }
+            )
+            .execute()
+        )
+        busy = (
+            result.get("calendars", {}).get("primary", {}).get("busy", [])
+        )
+        return [{"start": b["start"], "end": b["end"]} for b in busy]
 
     async def create_event(
         self,

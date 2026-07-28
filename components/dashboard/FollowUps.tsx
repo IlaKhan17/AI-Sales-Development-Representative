@@ -9,25 +9,10 @@ import { Textarea } from "@/components/ui/textarea"
 import { toast } from "sonner"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { cn } from "@/lib/utils"
-import { createClient } from "@/utils/supabase/client"
+import { apiFetch, ApiError } from "@/lib/api"
+import type { ReplyAnalysis as EmailAnalysis, RepliesResponse } from "@/lib/api-types"
 
-export type EmailAnalysis = {
-  email: {
-    from: string
-    subject: string
-    body: string
-  }
-  analysis: {
-    sentiment: string
-    intent: string
-  }
-  suggested_followup?: {
-    recipient: string
-    subject: string
-    body: string
-    status: string
-  }
-}
+export type { EmailAnalysis }
 
 type FollowUpsProps = {
   initialEmails: EmailAnalysis[]
@@ -38,34 +23,18 @@ export function FollowUps({ initialEmails }: FollowUpsProps) {
   const [analyzedEmails, setAnalyzedEmails] = useState<EmailAnalysis[]>(initialEmails)
   const [selectedEmail, setSelectedEmail] = useState<EmailAnalysis | null>(null)
   const [editedFollowup, setEditedFollowup] = useState("")
-  const supabase = createClient()
-
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://ai-sdr-production-afd7.up.railway.app'
 
   const fetchReplies = async () => {
     setLoading(true)
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) {
-        toast.error('Please sign in to fetch replies')
-        return
-      }
-
-      const response = await fetch(`${apiUrl}/emails/replies`, {
-        headers: { 'Authorization': `Bearer ${session.access_token}` },
-      })
-      if (!response.ok) {
-        const err = await response.json()
-        if (response.status === 400) {
-          toast.error('Please connect your Google account first')
-          return
-        }
-        throw new Error(err.detail || 'Failed to fetch replies')
-      }
-      const data = await response.json()
+      const data = await apiFetch<RepliesResponse>('/emails/replies')
       setAnalyzedEmails(data.analyzed_emails)
       toast.success(data.message)
     } catch (error: any) {
+      if (error instanceof ApiError && error.status === 400) {
+        toast.error('Please connect your Google account first')
+        return
+      }
       toast.error(error.message || 'Failed to fetch replies')
     } finally {
       setLoading(false)
@@ -76,32 +45,17 @@ export function FollowUps({ initialEmails }: FollowUpsProps) {
     if (!selectedEmail?.suggested_followup) return
 
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) {
-        toast.error('Please sign in first')
-        return
-      }
-
       const followup = selectedEmail.suggested_followup
       const body = editedFollowup || followup.body
 
-      const response = await fetch(`${apiUrl}/emails/send`, {
+      await apiFetch('/emails/send', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({
+        body: {
           to: followup.recipient,
           subject: followup.subject,
           body: body,
-        }),
+        },
       })
-
-      if (!response.ok) {
-        const err = await response.json()
-        throw new Error(err.detail || 'Failed to send follow-up')
-      }
 
       toast.success('Follow-up email sent via Gmail!')
       setSelectedEmail(null)

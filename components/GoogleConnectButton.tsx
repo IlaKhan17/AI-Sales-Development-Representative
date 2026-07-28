@@ -8,25 +8,14 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { createClient } from "@/utils/supabase/client";
+import { apiFetch } from "@/lib/api";
+import type { GoogleAuthUrlResponse, GoogleStatus } from "@/lib/api-types";
 import { Mail, CheckCircle2, LogOut, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-
-type GoogleStatus = {
-    connected: boolean;
-    email?: string;
-    scopes?: string[];
-    last_refreshed?: string;
-};
 
 export default function GoogleConnectButton() {
     const [status, setStatus] = useState<GoogleStatus>({ connected: false });
     const [loading, setLoading] = useState(true);
-    const supabase = createClient();
-
-    const apiUrl =
-        process.env.NEXT_PUBLIC_API_URL ||
-        "https://ai-sdr-production-afd7.up.railway.app";
 
     useEffect(() => {
         checkStatus();
@@ -46,18 +35,8 @@ export default function GoogleConnectButton() {
 
     const checkStatus = async () => {
         try {
-            const {
-                data: { session },
-            } = await supabase.auth.getSession();
-            if (!session) return;
-
-            const res = await fetch(`${apiUrl}/auth/google/status`, {
-                headers: { Authorization: `Bearer ${session.access_token}` },
-            });
-            if (res.ok) {
-                const data = await res.json();
-                setStatus(data);
-            }
+            const data = await apiFetch<GoogleStatus>("/auth/google/status");
+            setStatus(data);
         } catch (error) {
             console.error("Error checking Google status:", error);
         } finally {
@@ -68,20 +47,7 @@ export default function GoogleConnectButton() {
     const handleConnect = async () => {
         try {
             setLoading(true);
-            const {
-                data: { session },
-            } = await supabase.auth.getSession();
-            if (!session) {
-                toast.error("Please sign in first");
-                return;
-            }
-
-            const res = await fetch(`${apiUrl}/auth/google`, {
-                headers: { Authorization: `Bearer ${session.access_token}` },
-            });
-            if (!res.ok) throw new Error("Failed to get auth URL");
-
-            const { auth_url } = await res.json();
+            const { auth_url } = await apiFetch<GoogleAuthUrlResponse>("/auth/google");
             window.location.href = auth_url;
         } catch (error) {
             console.error("Error connecting Google:", error);
@@ -94,19 +60,9 @@ export default function GoogleConnectButton() {
     const handleDisconnect = async () => {
         try {
             setLoading(true);
-            const {
-                data: { session },
-            } = await supabase.auth.getSession();
-            if (!session) return;
-
-            const res = await fetch(`${apiUrl}/auth/google/disconnect`, {
-                method: "POST",
-                headers: { Authorization: `Bearer ${session.access_token}` },
-            });
-            if (res.ok) {
-                setStatus({ connected: false });
-                toast.success("Google account disconnected");
-            }
+            await apiFetch("/auth/google/disconnect", { method: "POST" });
+            setStatus({ connected: false });
+            toast.success("Google account disconnected");
         } catch (error) {
             console.error("Error disconnecting Google:", error);
             toast.error("Failed to disconnect");

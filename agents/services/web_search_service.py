@@ -1,8 +1,9 @@
-import os
-import logging
-from typing import List, Dict, Optional, Any
-from serpapi import GoogleSearch
 import asyncio
+import logging
+import os
+from typing import Any, Dict, List
+
+from serpapi import GoogleSearch
 
 logger = logging.getLogger(__name__)
 
@@ -11,7 +12,7 @@ class WebSearchService:
         self.api_key = os.getenv("SERP_API_KEY")
         if not self.api_key:
             logger.warning("SERP_API_KEY not found in environment variables")
-        
+
     async def search_google(self, query: str, num_results: int = 10) -> List[Dict[str, Any]]:
         """
         Perform a Google search using SerpAPI.
@@ -60,16 +61,16 @@ class WebSearchService:
         # Ensure the query targets LinkedIn profiles if not already
         if "site:linkedin.com/in/" not in query:
             query = f"site:linkedin.com/in/ {query}"
-        
+
         results = await self.search_google(query, num_results)
-        
+
         # Post-process to ensure we only get LinkedIn profile links
         linkedin_results = []
         for result in results:
             if "linkedin.com/in/" in result.get("link", ""):
                 result["source"] = "LinkedIn"
                 linkedin_results.append(result)
-        
+
         return linkedin_results
 
     async def search_reddit(self, query: str, num_results: int = 10) -> List[Dict[str, Any]]:
@@ -78,10 +79,10 @@ class WebSearchService:
         """
         if "site:reddit.com" not in query:
             query = f"site:reddit.com {query}"
-            
+
         results = await self.search_google(query, num_results)
-        
+
         for result in results:
             result["source"] = "Reddit"
-            
+
         return results

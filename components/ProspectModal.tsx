@@ -1,13 +1,13 @@
 "use client"
 
-import { createClient } from "@/utils/supabase/client"
 import { useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Loader2, Mail, Building2, Globe, Sparkles, AlertCircle, Quote, AtSign, CheckCircle2, HelpCircle, XCircle, ExternalLink, ShieldCheck, ShieldX, Brain } from "lucide-react"
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
-import axios from "axios"
+import { apiFetch } from "@/lib/api"
+import type { DraftEmailResponse } from "@/lib/api-types"
 import EmailDraftModal from "./EmailDrafts"
 import { cn } from "@/lib/utils"
 
@@ -93,13 +93,11 @@ export default function ProspectModal({ prospect, onClose }: ProspectModalProps)
   const handleGenerateEmailDraft = async () => {
     setLoading(true)
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
-      const supabase = createClient()
-      const { data: { session } } = await supabase.auth.getSession()
-      const response = await axios.post(`${apiUrl}/draft-emails`, prospect, {
-        headers: session ? { Authorization: `Bearer ${session.access_token}` } : {},
+      const data = await apiFetch<DraftEmailResponse>('/draft-emails', {
+        method: 'POST',
+        body: prospect,
       })
-      setEmailDraft(response.data.email)
+      setEmailDraft(data.email)
       setShowEmailDraft(true)
     } catch (error) {
       console.error("Error generating email draft:", error)

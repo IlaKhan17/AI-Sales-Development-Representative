@@ -1,0 +1,20 @@
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+exclude = [".venv", "venv", "__pycache__", "utils"]
+
+[tool.ruff.lint]
+# Pyflakes (real bugs), pycodestyle errors, and import sorting.
+# Deliberately not enabling the opinionated families (BLE/UP/B) yet — the
+# codebase predates them and a blanket rewrite would be churn without value.
+select = ["E", "F", "W", "I"]
+ignore = [
+    # FastAPI's `x = Depends(...)` idiom and long prompt strings make these noisy.
+    "E501", # line too long
+    "E402", # module import not at top of file (settings must load before some imports)
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Eval datasets/scripts favour readability over import hygiene.
+"evals/*" = ["E402"]
+"tests/*" = ["E402"]

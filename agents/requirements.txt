@@ -46,9 +46,10 @@ pyjwt==2.13.0
 playwright==1.61.0
 beautifulsoup4==4.15.0
 
-# Social
-praw==8.0.2
 
 # Email
 dnspython==2.8.0
 aiosmtplib==5.1.2
+
+# Prompt registry
+PyYAML==6.0.3

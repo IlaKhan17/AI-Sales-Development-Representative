@@ -9,7 +9,8 @@ import { useState, useEffect } from "react"
 import { Prospect } from "./ProspectModal"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
-import { createClient } from "@/utils/supabase/client"
+import { apiFetch } from "@/lib/api"
+import type { GoogleStatus } from "@/lib/api-types"
 
 type EmailDraft = {
   subject: string
@@ -27,9 +28,6 @@ export default function EmailDraftModal({ prospect, emailDraft, onClose }: Email
   const [email, setEmail] = useState<EmailDraft | null>(emailDraft)
   const [copied, setCopied] = useState(false)
   const [googleConnected, setGoogleConnected] = useState<boolean | null>(null)
-  const supabase = createClient()
-
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://ai-sdr-production-afd7.up.railway.app'
 
   useEffect(() => {
     checkGoogleStatus()
@@ -37,15 +35,8 @@ export default function EmailDraftModal({ prospect, emailDraft, onClose }: Email
 
   const checkGoogleStatus = async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) return
-      const res = await fetch(`${apiUrl}/auth/google/status`, {
-        headers: { 'Authorization': `Bearer ${session.access_token}` },
-      })
-      if (res.ok) {
-        const data = await res.json()
-        setGoogleConnected(data.connected)
-      }
+      const data = await apiFetch<GoogleStatus>('/auth/google/status')
+      setGoogleConnected(data.connected)
     } catch { setGoogleConnected(false) }
   }
 
@@ -60,29 +51,14 @@ export default function EmailDraftModal({ prospect, emailDraft, onClose }: Email
     }
     setLoading(true)
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) {
-        toast.error('Please sign in first')
-        return
-      }
-
-      const response = await fetch(`${apiUrl}/emails/send`, {
+      await apiFetch('/emails/send', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({
+        body: {
           to: prospect.email,
           subject: email?.subject,
           body: email?.content,
-        })
+        },
       })
-
-      if (!response.ok) {
-        const err = await response.json()
-        throw new Error(err.detail || 'Failed to send email')
-      }
 
       toast.success('Email sent via Gmail successfully!')
       onClose()

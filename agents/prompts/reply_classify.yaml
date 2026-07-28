@@ -1,0 +1,15 @@
+id: reply_classify
+version: 1
+temperature: 0
+system: |-
+  You are a sales assistant analyzing a reply to an outbound sales email. Classify its sentiment and intent.
+user_template: |2
+
+  Email reply:
+  {body}
+
+  Return JSON:
+  {{
+    "sentiment": "Positive" | "Neutral" | "Negative",
+    "intent": "Interested" | "Follow-Up Required" | "Needs Information" | "Not Interested"
+  }}

@@ -3,19 +3,28 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
+import { useWorkspaceOptional } from '@/components/providers/workspace-provider';
 import {
     LayoutDashboard,
     Users,
     Mail,
-    Settings,
     LogOut,
     ChevronLeft,
     ChevronRight,
     Menu,
     X,
-    Zap
+    Zap,
+    Target,
+    Megaphone,
+    Settings,
+    CheckSquare,
+    Inbox,
+    BarChart3,
+    Video
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { useApprovalCounts } from '@/lib/hooks/use-approvals';
 import { useState, useEffect } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { useRouter } from 'next/navigation';
@@ -32,30 +41,89 @@ export function AppSidebar({ user }: SidebarProps) {
     const [mobileOpen, setMobileOpen] = useState(false);
     const supabase = createClient();
 
-    const routes = [
+    // Sidebar is rendered by app/(private)/layout.tsx, outside the workspace
+    // segment, so workspace context may be absent (e.g. on /profile).
+    const workspaceCtx = useWorkspaceOptional();
+    // The sidebar lives outside the /w/[workspaceId] layout, so also derive
+    // the active workspace from the URL when context is unavailable.
+    const wsFromPath = pathname?.match(/^\/w\/([^/]+)/)?.[1];
+    const activeWorkspaceId = workspaceCtx?.workspace.id ?? wsFromPath ?? '';
+    // Without a known workspace there is no valid /w/<id> URL to build, so send
+    // nav links to /workspaces, which resolves the user's workspace and
+    // redirects (or to onboarding when they have none).
+    const wsHref = (path: string) =>
+        activeWorkspaceId ? `/w/${activeWorkspaceId}${path}` : '/workspaces';
+
+    const approvalCounts = useApprovalCounts(activeWorkspaceId);
+    const pendingApprovals = approvalCounts.data?.pending ?? 0;
+
+    const routes: {
+        label: string;
+        icon: typeof LayoutDashboard;
+        href: string;
+        color: string;
+        badge?: number;
+    }[] = [
         {
             label: 'Dashboard',
             icon: LayoutDashboard,
-            href: '/dashboard',
+            href: wsHref('/dashboard'),
             color: 'text-sky-500',
+        },
+        {
+            label: 'Campaigns',
+            icon: Megaphone,
+            href: wsHref('/campaigns'),
+            color: 'text-amber-500',
+        },
+        {
+            label: 'Approvals',
+            icon: CheckSquare,
+            href: wsHref('/approvals'),
+            color: 'text-emerald-600',
+            badge: pendingApprovals,
+        },
+        {
+            label: 'Inbox',
+            icon: Inbox,
+            href: wsHref('/inbox'),
+            color: 'text-blue-500',
         },
         {
             label: 'Prospects',
             icon: Users,
-            href: '/prospects',
+            href: wsHref('/prospects'),
             color: 'text-violet-500',
+        },
+        {
+            label: 'Meetings',
+            icon: Video,
+            href: wsHref('/meetings'),
+            color: 'text-cyan-500',
         },
         {
             label: 'Emails',
             icon: Mail,
-            href: '/dashboard?tab=follow-ups', // Temporarily query param or route
+            href: wsHref('/dashboard?tab=follow-ups'), // Temporarily query param or route
             color: 'text-pink-700',
+        },
+        {
+            label: 'ICP',
+            icon: Target,
+            href: wsHref('/icp'),
+            color: 'text-emerald-500',
+        },
+        {
+            label: 'Evals',
+            icon: BarChart3,
+            href: wsHref('/evals'),
+            color: 'text-cyan-500',
         },
         {
             label: 'Settings',
             icon: Settings,
-            href: '/settings',
-            color: 'text-gray-500',
+            href: wsHref('/settings'),
+            color: 'text-orange-500',
         },
     ];
 
@@ -82,7 +150,7 @@ export function AppSidebar({ user }: SidebarProps) {
                 )}
             >
                 <div className="flex items-center justify-between p-6">
-                    <Link href="/dashboard" className={cn("flex items-center gap-2 overflow-hidden transition-all", collapsed && "justify-center w-full")}>
+                    <Link href={wsHref('/dashboard')} className={cn("flex items-center gap-2 overflow-hidden transition-all", collapsed && "justify-center w-full")}>
                         <div className="h-8 w-8 min-w-8 rounded-lg bg-primary/10 flex items-center justify-center">
                             <Zap className="h-4 w-4 text-primary" />
                         </div>
@@ -118,7 +186,7 @@ export function AppSidebar({ user }: SidebarProps) {
                 <div className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
                     {routes.map((route) => (
                         <Link
-                            key={route.href}
+                            key={route.label}
                             href={route.href}
                             className={cn(
                                 "group flex items-center p-3 text-sm font-medium rounded-lg transition-all relative overflow-hidden",
@@ -136,6 +204,11 @@ export function AppSidebar({ user }: SidebarProps) {
                             <span className={cn("transition-all duration-300 overflow-hidden whitespace-nowrap", collapsed ? "w-0 opacity-0" : "w-auto opacity-100")}>
                                 {route.label}
                             </span>
+                            {!collapsed && route.badge !== undefined && route.badge > 0 && (
+                                <Badge className="ml-auto h-5 min-w-5 justify-center px-1.5 text-[10px]">
+                                    {route.badge}
+                                </Badge>
+                            )}
                         </Link>
                     ))}
                 </div>
