@@ -34,7 +34,7 @@ def generate_random_email():
     return f"test_user_{''.join(random.choices(string.ascii_lowercase + string.digits, k=8))}@example.com"
 
 async def test_api_auth():
-    email = "mohdjamikhann@gmail.com"
+    email = "ila.rehman.khan@gmail.com"
     password = "SafePassword123!"
     
     logger.info(f"Creating test user: {email}")
