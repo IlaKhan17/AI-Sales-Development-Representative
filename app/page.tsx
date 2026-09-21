@@ -268,8 +268,8 @@ export default async function LandingPage() {
           </div>
           <p className="text-sm text-muted-foreground">
             Built by{" "}
-            <a href="mailto:mohdjamikhann@gmail.com" className="text-foreground hover:text-primary transition-colors">
-              Mohd Jami
+            <a href="mailto:ila.rehman.khan@gmail.com" className="text-foreground hover:text-primary transition-colors">
+              Ila Rehman
             </a>
           </p>
         </div>
