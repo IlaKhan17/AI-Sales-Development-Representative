@@ -15,9 +15,9 @@ export function DashboardOverview({ dashboardOverview }: { dashboardOverview: Da
       title: "Total Prospects",
       value: stats.totalProspects,
       icon: Users,
-      change: "+20%",
+      change: "",
       trend: "up",
-      description: "from last month",
+      description: "in this workspace",
       color: "text-blue-500",
       bg: "bg-blue-500/10"
     },
@@ -35,9 +35,9 @@ export function DashboardOverview({ dashboardOverview }: { dashboardOverview: Da
       title: "Response Rate",
       value: `${stats.responseRate}%`,
       icon: CheckCircle,
-      change: "+5%",
+      change: "",
       trend: "up",
-      description: "from last week",
+      description: "of sent emails",
       color: "text-green-500",
       bg: "bg-green-500/10"
     },
@@ -68,10 +68,12 @@ export function DashboardOverview({ dashboardOverview }: { dashboardOverview: Da
             <CardContent>
               <div className="text-3xl font-bold tracking-tight">{card.value}</div>
               <p className="flex items-center text-xs text-muted-foreground mt-1">
-                <span className={cn("flex items-center font-medium mr-1", card.trend === 'up' ? 'text-green-500' : 'text-green-500')}>
-                  {card.change}
-                  {card.trend === 'up' ? <TrendingUp className="ml-0.5 h-3 w-3" /> : <TrendingDown className="ml-0.5 h-3 w-3" />}
-                </span>
+                {card.change && (
+                  <span className={cn("flex items-center font-medium mr-1", card.trend === 'up' ? 'text-green-500' : 'text-green-500')}>
+                    {card.change}
+                    {card.trend === 'up' ? <TrendingUp className="ml-0.5 h-3 w-3" /> : <TrendingDown className="ml-0.5 h-3 w-3" />}
+                  </span>
+                )}
                 {card.description}
               </p>
             </CardContent>

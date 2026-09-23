@@ -466,7 +466,8 @@ export interface EvidenceClaim {
 
 export interface ProspectSignal {
   signal_type: string;
-  value?: string | null;
+  // The backend stores {value, type}; older rows may hold a bare string.
+  value?: string | { value?: unknown; type?: string | null } | null;
   confidence?: number | null;
   evidence_ids?: string[];
 }
