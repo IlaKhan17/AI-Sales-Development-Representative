@@ -50,6 +50,24 @@ def _profile_row(fields: ProductProfileFields, *, partial: bool = False) -> dict
     return row
 
 
+# Columns whose API name differs from the database column.
+_PROFILE_API_ALIASES = {"company_name": "name", "product_description": "description", "website": "website_url"}
+
+
+def _profile_out(row: dict | None) -> dict | None:
+    """Add API field names to a product_profiles row so clients can round-trip it.
+
+    The settings form reads company_name / product_description / website; without
+    these it loaded blanks and saving wiped the stored values.
+    """
+    if not row:
+        return row
+    out = dict(row)
+    for api, col in _PROFILE_API_ALIASES.items():
+        out.setdefault(api, row.get(col))
+    return out
+
+
 def _get_ctx(workspace_id: str, user: AuthUser) -> WorkspaceContext:
     info = resolve_membership(user.id, workspace_id)
     return WorkspaceContext(
@@ -123,7 +141,7 @@ async def create_workspace(body: WorkspaceCreateRequest, user: AuthUser = Depend
         "organization": org,
         "workspace": workspace,
         "membership": {"role": membership["role"]},
-        "product_profile": product_profile,
+        "product_profile": _profile_out(product_profile),
     }
 
 
@@ -163,7 +181,7 @@ async def get_workspace(workspace_id: str, user: AuthUser = Depends(get_current_
     ).data
     return {
         "workspace": workspace,
-        "product_profile": profile[0] if profile else None,
+        "product_profile": _profile_out(profile[0] if profile else None),
         "role": ctx.role,
     }
 
@@ -213,7 +231,7 @@ async def update_workspace(
                 )
                 profile = db.table("product_profiles").insert(row).execute().data[0]
 
-    return {"workspace": workspace, "product_profile": profile}
+    return {"workspace": workspace, "product_profile": _profile_out(profile)}
 
 
 # ── members ───────────────────────────────────────────────────────
