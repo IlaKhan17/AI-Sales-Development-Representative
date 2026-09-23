@@ -14,13 +14,7 @@ import {
 } from '@/lib/hooks/use-workspaces';
 import { can } from '@/lib/roles';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { FormSection } from '@/components/page-header';
 import {
   Form,
   FormControl,
@@ -142,26 +136,21 @@ export default function WorkspaceSettingsPage() {
   });
 
   return (
-    <div className="max-w-2xl space-y-6">
+    <div className="max-w-5xl space-y-8">
       <SettingsNav />
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Workspace settings</h1>
+        <h2 className="text-lg font-semibold">Company profile</h2>
         <p className="text-sm text-muted-foreground">
           {editable
-            ? 'Company profile and sending defaults for this workspace.'
-            : 'Read-only view — ask a workspace admin to make changes.'}
+            ? 'What Davis knows about your company and how it sends. Drafts are written from this.'
+            : 'Read only. Ask a workspace owner or admin to make changes.'}
         </p>
       </div>
 
       <Form {...form}>
         <form onSubmit={onSubmit} className="space-y-6">
           <fieldset disabled={!editable || update.isPending} className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Company</CardTitle>
-                <CardDescription>Basics about the company and product.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-5">
+            <FormSection title="Company" description="What you sell and where to learn more about it.">
                 <FormField
                   control={form.control}
                   name="name"
@@ -214,17 +203,9 @@ export default function WorkspaceSettingsPage() {
                     </FormItem>
                   )}
                 />
-              </CardContent>
-            </Card>
+              </FormSection>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Positioning</CardTitle>
-                <CardDescription>
-                  Messaging guardrails used when drafting outreach.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-5">
+            <FormSection title="Positioning" description="How drafts talk about your product. Only approved stories are used; disallowed claims block a draft.">
                 <FormField
                   control={form.control}
                   name="target_market"
@@ -308,15 +289,9 @@ export default function WorkspaceSettingsPage() {
                     </FormItem>
                   )}
                 />
-              </CardContent>
-            </Card>
+              </FormSection>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Sending</CardTitle>
-                <CardDescription>Sender identity and safety limits.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-5">
+            <FormSection title="Sending" description="Who emails come from and how many can go out in a day.">
                 <div className="grid gap-5 sm:grid-cols-2">
                   <FormField
                     control={form.control}
@@ -386,8 +361,7 @@ export default function WorkspaceSettingsPage() {
                     )}
                   />
                 </div>
-              </CardContent>
-            </Card>
+              </FormSection>
           </fieldset>
 
           {editable && (

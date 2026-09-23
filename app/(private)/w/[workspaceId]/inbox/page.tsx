@@ -17,9 +17,8 @@ import { useWorkspace } from '@/components/providers/workspace-provider';
 import { useReplies, useReplyAction } from '@/lib/hooks/use-replies';
 import type { Reply, ReplyIntent } from '@/lib/api-types';
 import { IntentBadge, INTENT_LABELS } from '@/components/inbox/intent-badge';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { PageHeader } from '@/components/page-header';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -44,13 +43,11 @@ export default function InboxPage() {
   );
 
   return (
-    <div className="max-w-3xl space-y-4">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Inbox</h1>
-        <p className="text-sm text-muted-foreground">
-          Classified replies from your outreach.
-        </p>
-      </div>
+    <div className="max-w-4xl space-y-6">
+      <PageHeader
+        title="Inbox"
+        description="Replies to your outreach, sorted by what they ask of you. Any reply stops that prospect's sequence; unsubscribes are suppressed automatically."
+      />
 
       {/* Filter bar */}
       <div className="flex flex-wrap items-center gap-4">
@@ -77,7 +74,7 @@ export default function InboxPage() {
             onCheckedChange={setRequiresReview}
           />
           <Label htmlFor="needs-review" className="text-sm font-normal">
-            Needs review only
+            Needs a person only
           </Label>
         </div>
       </div>
@@ -89,10 +86,10 @@ export default function InboxPage() {
           <Skeleton className="h-28 w-full rounded-xl" />
         </div>
       ) : isError ? (
-        <Card className="border-destructive/30">
-          <CardContent className="py-10 text-center">
-            <p className="text-sm text-destructive">
-              {error instanceof Error ? error.message : 'Failed to load replies'}
+        <div className="rounded-md border border-hold/30 bg-hold/10 py-10 text-center">
+          <div>
+            <p className="text-sm text-hold">
+              {error instanceof Error ? error.message : "Couldn't load replies."}
             </p>
             <Button
               variant="outline"
@@ -102,23 +99,26 @@ export default function InboxPage() {
             >
               <RefreshCw className="mr-2 h-3.5 w-3.5" /> Retry
             </Button>
-          </CardContent>
-        </Card>
-      ) : !data || data.replies.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center gap-2 py-14 text-center">
-            <MailQuestion className="h-8 w-8 text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">
-              No replies match these filters.
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-3">
-          {data.replies.map((reply) => (
-            <ReplyCard key={reply.id} reply={reply} />
-          ))}
+          </div>
         </div>
+      ) : !data || data.replies.length === 0 ? (
+        <div className="rounded-md border border-dashed border-border px-6 py-14 text-center">
+          <MailQuestion className="mx-auto h-6 w-6 text-muted-foreground" />
+          <p className="mt-3 text-sm font-medium">
+            {intent !== 'all' || requiresReview ? 'No replies match these filters' : 'No replies yet'}
+          </p>
+          <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">
+            Davis checks Gmail every 10 minutes, so a reply shows up here within about 10 minutes of arriving.
+          </p>
+        </div>
+      ) : (
+        <ul className="divide-y divide-border rounded-md border border-border bg-card">
+          {data.replies.map((reply) => (
+            <li key={reply.id}>
+              <ReplyCard reply={reply} />
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   );
@@ -132,7 +132,7 @@ function ReplyCard({ reply }: { reply: Reply }) {
   const handleDraftFollowup = async () => {
     try {
       await action.mutateAsync({ replyId: reply.id, action: 'draft_followup' });
-      toast.success('Follow-up drafted and sent for approval', {
+      toast.success('Follow-up drafted and waiting for approval', {
         action: {
           label: 'Review',
           onClick: () => {
@@ -148,11 +148,10 @@ function ReplyCard({ reply }: { reply: Reply }) {
   };
 
   return (
-    <Card>
-      <CardContent className="space-y-3 pt-6">
+    <article className="space-y-3 px-5 py-4">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div className="min-w-0">
-            <p className="truncate text-sm font-medium">{reply.from_email}</p>
+            <p className="truncate text-sm font-semibold">{reply.from_email}</p>
             <p className="truncate text-sm text-muted-foreground">
               {reply.subject}
             </p>
@@ -167,24 +166,21 @@ function ReplyCard({ reply }: { reply: Reply }) {
         <div className="flex flex-wrap items-center gap-2">
           <IntentBadge intent={reply.intent} confidence={reply.intent_confidence} />
           {reply.requires_human_review && (
-            <Badge
-              variant="outline"
-              className="border-amber-400 text-amber-700 dark:text-amber-400"
-            >
-              Needs review
-            </Badge>
+            <span className="inline-flex rounded-full border border-dashed border-caution/50 px-2 py-0.5 text-xs font-medium text-caution">
+              Needs a person
+            </span>
           )}
           {reply.recommended_action && (
             <span className="text-xs text-muted-foreground">
-              Recommended: {reply.recommended_action.replaceAll('_', ' ')}
+              Suggested next step: {reply.recommended_action.replaceAll('_', ' ')}
             </span>
           )}
         </div>
 
         {expanded && (
-          <p className="whitespace-pre-wrap rounded-md bg-muted/50 p-3 text-sm">
+          <blockquote className="max-w-[62ch] whitespace-pre-wrap border-l-2 border-border pl-4 font-serif text-base leading-relaxed">
             {reply.body}
-          </p>
+          </blockquote>
         )}
 
         <div className="flex items-center gap-2">
@@ -217,10 +213,9 @@ function ReplyCard({ reply }: { reply: Reply }) {
             Draft follow-up
           </Button>
           <Button variant="ghost" size="sm" asChild>
-            <Link href={`/w/${workspace.id}/approvals`}>Go to approvals</Link>
+            <Link href={`/w/${workspace.id}/approvals`}>Open approvals</Link>
           </Button>
         </div>
-      </CardContent>
-    </Card>
+    </article>
   );
 }

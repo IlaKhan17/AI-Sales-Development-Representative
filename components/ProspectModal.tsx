@@ -56,25 +56,25 @@ type ProspectModalProps = {
 }
 
 const confidenceConfig = {
-  verified: { icon: CheckCircle2, color: "text-green-500", label: "Verified", bg: "bg-green-500/10 border-green-500/20" },
-  likely: { icon: CheckCircle2, color: "text-blue-500", label: "Likely valid", bg: "bg-blue-500/10 border-blue-500/20" },
-  unverifiable: { icon: HelpCircle, color: "text-yellow-500", label: "Unverifiable", bg: "bg-yellow-500/10 border-yellow-500/20" },
-  invalid: { icon: XCircle, color: "text-red-500", label: "Invalid", bg: "bg-red-500/10 border-red-500/20" },
+  verified: { icon: CheckCircle2, color: "text-approve", label: "Verified", bg: "bg-approve/10 border-approve/30" },
+  likely: { icon: CheckCircle2, color: "text-foreground", label: "Likely valid", bg: "bg-muted border-border" },
+  unverifiable: { icon: HelpCircle, color: "text-caution", label: "Unverifiable", bg: "bg-caution/10 border-caution/30" },
+  invalid: { icon: XCircle, color: "text-hold", label: "Invalid", bg: "bg-hold/10 border-hold/30" },
   unknown: { icon: HelpCircle, color: "text-muted-foreground", label: "Unknown", bg: "bg-muted/50 border-border" },
 }
 
 const sourceColors: Record<string, string> = {
-  "Product Hunt": "bg-orange-500/10 text-orange-600 border-orange-500/20",
-  "G2": "bg-red-500/10 text-red-600 border-red-500/20",
-  "Hacker News Hiring": "bg-amber-500/10 text-amber-700 border-amber-500/20",
-  "GitHub": "bg-violet-500/10 text-violet-600 border-violet-500/20",
-  "Crunchbase": "bg-blue-500/10 text-blue-600 border-blue-500/20",
-  "Wellfound": "bg-teal-500/10 text-teal-600 border-teal-500/20",
-  "YC Directory": "bg-orange-600/10 text-orange-700 border-orange-600/20",
+  "Product Hunt": "bg-caution/10 text-caution border-caution/30",
+  "G2": "bg-hold/10 text-hold border-hold/30",
+  "Hacker News Hiring": "bg-caution/10 text-caution border-caution/30",
+  "GitHub": "bg-muted text-muted-foreground border-border",
+  "Crunchbase": "bg-muted text-foreground border-border",
+  "Wellfound": "bg-approve/10 text-approve border-approve/30",
+  "YC Directory": "bg-caution/10 text-caution border-caution/30",
   "AngelList": "bg-black/5 text-foreground border-border",
-  "LinkedIn": "bg-sky-500/10 text-sky-600 border-sky-500/20",
-  "Google": "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
-  "Reddit": "bg-rose-500/10 text-rose-600 border-rose-500/20",
+  "LinkedIn": "bg-muted text-foreground border-border",
+  "Google": "bg-approve/10 text-approve border-approve/30",
+  "Reddit": "bg-hold/10 text-hold border-hold/30",
 }
 
 export default function ProspectModal({ prospect, onClose }: ProspectModalProps) {
@@ -121,7 +121,7 @@ export default function ProspectModal({ prospect, onClose }: ProspectModalProps)
                 <DialogTitle className="text-2xl font-bold">{displayName}</DialogTitle>
                 <Badge variant={prospect.isProspect ? "default" : "secondary"} className={cn(
                   "text-xs px-2 py-0.5",
-                  prospect.isProspect ? "bg-primary/20 text-primary hover:bg-primary/30" : ""
+                  prospect.isProspect ? "bg-muted text-primary hover:bg-primary/30" : ""
                 )}>
                   {prospect.isProspect ? "High Intent" : "Lead"}
                 </Badge>
@@ -154,11 +154,11 @@ export default function ProspectModal({ prospect, onClose }: ProspectModalProps)
             </div>
 
             <div className="flex flex-col items-end gap-1 shrink-0">
-              <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Alignment</span>
+              <span className="text-xs text-muted-foreground font-medium">Alignment</span>
               <div className="flex items-center gap-2">
                 <span className={cn(
                   "text-2xl font-bold",
-                  alignmentScore >= 80 ? "text-green-500" : alignmentScore >= 50 ? "text-yellow-500" : "text-muted-foreground"
+                  alignmentScore >= 80 ? "text-approve" : alignmentScore >= 50 ? "text-caution" : "text-muted-foreground"
                 )}>
                   {alignmentScore.toFixed(0)}%
                 </span>
@@ -168,7 +168,7 @@ export default function ProspectModal({ prospect, onClose }: ProspectModalProps)
           </DialogHeader>
 
           {/* Body */}
-          <div className="px-6 py-4 space-y-5 bg-card/30 backdrop-blur-sm max-h-[60vh] overflow-y-auto">
+          <div className="px-6 py-4 space-y-5 bg-card max-h-[60vh] overflow-y-auto">
 
             {/* Email Section */}
             {(primaryEmail || (prospect.email_candidates && prospect.email_candidates.length > 0)) && (
@@ -202,7 +202,7 @@ export default function ProspectModal({ prospect, onClose }: ProspectModalProps)
                   </div>
                 )}
                 {showAllEmails && prospect.email_candidates && (
-                  <div className="mt-2 space-y-1 border-t border-border/30 pt-2">
+                  <div className="mt-2 space-y-1 border-t border-border pt-2">
                     {prospect.email_candidates.slice(0, 6).map((c, i) => {
                       const cfg = confidenceConfig[c.confidence] || confidenceConfig.unknown
                       const Icon = cfg.icon
@@ -221,7 +221,7 @@ export default function ProspectModal({ prospect, onClose }: ProspectModalProps)
 
             {/* Selection Reasoning */}
             {prospect.selection_reasoning && (
-              <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 space-y-1.5">
+              <div className="rounded-lg border border-border bg-muted p-3 space-y-1.5">
                 <h4 className="text-sm font-medium flex items-center gap-2 text-primary">
                   <Brain className="h-4 w-4" />
                   Why This Lead Was Selected
@@ -232,8 +232,8 @@ export default function ProspectModal({ prospect, onClose }: ProspectModalProps)
 
             {/* ICP Score Breakdown */}
             {prospect.icp_score_breakdown && Object.keys(prospect.icp_score_breakdown).length > 0 && (
-              <div className="rounded-lg border border-border/60 bg-muted/30 p-3 space-y-2">
-                <h4 className="text-sm font-medium flex items-center gap-2 text-muted-foreground uppercase tracking-wider">
+              <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-2">
+                <h4 className="text-sm font-medium flex items-center gap-2 text-muted-foreground">
                   <ShieldCheck className="h-4 w-4" />
                   ICP Fit Breakdown
                 </h4>
@@ -252,7 +252,7 @@ export default function ProspectModal({ prospect, onClose }: ProspectModalProps)
                           <span className="text-muted-foreground">{label}</span>
                           <span className={cn(
                             "font-semibold",
-                            pct >= 80 ? "text-green-500" : pct >= 50 ? "text-yellow-500" : "text-red-400"
+                            pct >= 80 ? "text-approve" : pct >= 50 ? "text-caution" : "text-hold"
                           )}>{pct}%</span>
                         </div>
                         <Progress value={pct} className="h-1.5" />
@@ -284,13 +284,13 @@ export default function ProspectModal({ prospect, onClose }: ProspectModalProps)
             <div className="grid md:grid-cols-2 gap-6">
               <div className="space-y-4">
                 <div>
-                  <h4 className="text-sm font-medium text-muted-foreground mb-2 uppercase tracking-wider flex items-center gap-2">
+                  <h4 className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
                     <AlertCircle className="h-4 w-4" />
                     Pain Points
                   </h4>
                   <div className="flex flex-wrap gap-2">
                     {(prospect.pain_points || []).map((point, index) => (
-                      <Badge key={index} variant="outline" className="bg-background/50 border-destructive/20 text-destructive-foreground">
+                      <Badge key={index} variant="outline" className="border-border bg-card font-normal text-foreground">
                         {point}
                       </Badge>
                     ))}
@@ -298,11 +298,11 @@ export default function ProspectModal({ prospect, onClose }: ProspectModalProps)
                 </div>
 
                 <div>
-                  <h4 className="text-sm font-medium text-muted-foreground mb-2 uppercase tracking-wider flex items-center gap-2">
+                  <h4 className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
                     <Sparkles className="h-4 w-4" />
                     Solution Fit
                   </h4>
-                  <p className="text-sm leading-relaxed bg-primary/5 p-3 rounded-lg border border-primary/10">
+                  <p className="text-sm leading-relaxed bg-muted p-3 rounded-lg border border-primary/10">
                     {prospect.solution_fit}
                   </p>
                 </div>
@@ -310,12 +310,12 @@ export default function ProspectModal({ prospect, onClose }: ProspectModalProps)
 
               <div className="space-y-4">
                 <div>
-                  <h4 className="text-sm font-medium text-muted-foreground mb-2 uppercase tracking-wider">Industry</h4>
+                  <h4 className="text-sm font-medium text-muted-foreground mb-2">Industry</h4>
                   <Badge variant="secondary" className="rounded-full px-3">{prospect.industry}</Badge>
                 </div>
 
                 <div>
-                  <h4 className="text-sm font-medium text-muted-foreground mb-2 uppercase tracking-wider flex items-center gap-2">
+                  <h4 className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
                     <Quote className="h-4 w-4" />
                     AI Insights
                   </h4>
@@ -327,7 +327,7 @@ export default function ProspectModal({ prospect, onClose }: ProspectModalProps)
             </div>
           </div>
 
-          <DialogFooter className="p-6 pt-4 bg-muted/20 border-t border-border/50 flex flex-row justify-end items-center gap-2">
+          <DialogFooter className="p-6 pt-4 bg-muted/20 border-t border-border flex flex-row justify-end items-center gap-2">
             {prospect.url && (
               <Button variant="outline" size="lg" asChild>
                 <a href={prospect.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
@@ -339,7 +339,7 @@ export default function ProspectModal({ prospect, onClose }: ProspectModalProps)
             <Button
               onClick={handleGenerateEmailDraft}
               disabled={loading}
-              className="w-full sm:w-auto shadow-sm"
+              className="w-full sm:w-auto"
               size="lg"
             >
               {loading ? (

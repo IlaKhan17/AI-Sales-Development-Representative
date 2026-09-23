@@ -6,14 +6,13 @@ import { format } from 'date-fns';
 import { toast } from 'sonner';
 import {
   Bot,
-  CalendarDays,
   Clock,
   Loader2,
   Plus,
   Sparkles,
-  Video,
 } from 'lucide-react';
 
+import { cn } from '@/lib/utils';
 import { useWorkspace } from '@/components/providers/workspace-provider';
 import { useAddBot, useMeetings } from '@/lib/hooks/use-meetings';
 import { useAvailability, useCreateEvent } from '@/lib/hooks/use-calendar';
@@ -21,16 +20,9 @@ import { useProspectsV2 } from '@/lib/hooks/use-prospects-v2';
 import { ApiError } from '@/lib/api';
 import type { AvailabilitySlot, MeetingV2 } from '@/lib/api-types';
 
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { PageHeader, PageSection } from '@/components/page-header';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
@@ -63,40 +55,43 @@ function MeetingRow({
   return (
     <Link
       href={`/w/${workspaceId}/meetings/${meeting.id}`}
-      className="flex items-center justify-between gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/50"
+      className="flex items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-background/60"
     >
       <div className="min-w-0">
         <div className="flex items-center gap-2">
           {meeting.status === 'active' && (
             <span className="relative flex h-2.5 w-2.5 shrink-0">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-approve/60" />
+              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-approve" />
             </span>
           )}
-          <p className="truncate font-medium">{meeting.title}</p>
+          <p className="truncate font-semibold">{meeting.title}</p>
         </div>
         <p className="mt-0.5 text-xs text-muted-foreground">
           {format(new Date(meeting.created_at), 'PPp')}
-          {meeting.duration_minutes ? ` · ${meeting.duration_minutes} min` : ''}
+          {meeting.duration_minutes ? `, ${meeting.duration_minutes} min` : ''}
         </p>
       </div>
       <div className="flex shrink-0 items-center gap-2">
         {meeting.has_insights && (
-          <Badge variant="secondary" className="gap-1">
-            <Sparkles className="h-3 w-3" /> Insights
-          </Badge>
+          <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+            <Sparkles className="h-3 w-3" /> Insights ready
+          </span>
         )}
-        <Badge
-          variant={
+        <span
+          className={cn(
+            'inline-flex rounded-full border px-2 py-0.5 text-xs font-medium capitalize',
             meeting.status === 'completed'
-              ? 'default'
+              ? 'border-border bg-card text-foreground'
               : meeting.status === 'failed'
-                ? 'destructive'
-                : 'outline'
-          }
+                ? 'border-hold/30 bg-hold/10 text-hold'
+                : meeting.status === 'active'
+                  ? 'border-approve/30 bg-approve/10 text-approve'
+                  : 'border-dashed border-border text-muted-foreground'
+          )}
         >
-          {meeting.status}
-        </Badge>
+          {meeting.status === 'active' ? 'Recording' : meeting.status}
+        </span>
       </div>
     </Link>
   );
@@ -200,40 +195,32 @@ export default function MeetingsPage() {
   };
 
   return (
-    <div className="space-y-6 p-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Meetings</h1>
-          <p className="text-sm text-muted-foreground">
-            Send the AI notetaker to calls and book time with prospects.
-          </p>
-        </div>
-        <Button onClick={() => setAddOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" /> Add Bot
-        </Button>
-      </div>
+    <div className="space-y-8">
+      <PageHeader
+        title="Meetings"
+        description="Send a notetaker to your calls for objections, next steps and buying signals, and book time from your calendar."
+        actions={
+          <Button onClick={() => setAddOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" /> Add notetaker
+          </Button>
+        }
+      />
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Meetings list */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Video className="h-4 w-4" /> Recorded meetings
-            </CardTitle>
-            <CardDescription>
-              Completed meetings link to their sales insights.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2">
+      <div className="grid gap-10 lg:grid-cols-2">
+        <PageSection
+          title="Recorded meetings"
+          description="Open one to read its summary and action items."
+        >
+          <div className="divide-y divide-border rounded-md border border-border bg-card">
             {meetingsQuery.isLoading ? (
               <>
                 <Skeleton className="h-14 w-full" />
                 <Skeleton className="h-14 w-full" />
               </>
             ) : meetings.length === 0 ? (
-              <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
+              <div className="p-8 text-center text-sm text-muted-foreground">
                 <Bot className="mx-auto mb-2 h-6 w-6" />
-                No meetings yet. Add the bot to your next call.
+                No meetings yet. Add the notetaker to your next call.
               </div>
             ) : (
               <>
@@ -245,26 +232,20 @@ export default function MeetingsPage() {
                 ))}
               </>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </PageSection>
 
-        {/* Calendar booking */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CalendarDays className="h-4 w-4" /> Book a meeting
-            </CardTitle>
-            <CardDescription>
-              Availability from your Google Calendar ({timezone}).
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+        <PageSection
+          title="Book a meeting"
+          description={`Free times from your Google Calendar, shown in ${timezone}.`}
+        >
+          <div className="rounded-md border border-border bg-card p-4">
             <div className="flex flex-col gap-4 sm:flex-row">
               <Calendar
                 mode="single"
                 selected={selectedDate}
                 onSelect={setSelectedDate}
-                className="rounded-md border"
+                className="rounded-md border border-border bg-background"
               />
               <div className="flex-1 space-y-3">
                 <div className="space-y-1.5">
@@ -292,8 +273,14 @@ export default function MeetingsPage() {
                     <Skeleton className="h-24 w-full" />
                   ) : availability.isError ? (
                     <p className="text-sm text-muted-foreground">
-                      Could not load availability — is Google Calendar
-                      connected?
+                      Connect Google in{' '}
+                      <Link
+                        href={`/w/${workspaceId}/settings/integrations`}
+                        className="font-medium text-foreground underline underline-offset-2"
+                      >
+                        Settings, Integrations
+                      </Link>{' '}
+                      to see your free times.
                     </p>
                   ) : (availability.data?.slots.length ?? 0) === 0 ? (
                     <p className="text-sm text-muted-foreground">
@@ -319,8 +306,8 @@ export default function MeetingsPage() {
                 </div>
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </PageSection>
       </div>
 
       {/* Add Bot dialog */}

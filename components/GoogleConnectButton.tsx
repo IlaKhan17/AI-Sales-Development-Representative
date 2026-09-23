@@ -97,7 +97,7 @@ export default function GoogleConnectButton() {
                 <Tooltip>
                     <TooltipTrigger asChild>
                         <div className="flex items-center gap-2">
-                            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-500/10 border border-green-500/20 text-green-600 dark:text-green-400 text-sm">
+                            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-approve/10 border border-approve/30 text-approve text-sm">
                                 <CheckCircle2 className="h-3.5 w-3.5" />
                                 <span className="hidden sm:inline">{status.email}</span>
                                 <span className="sm:hidden">Connected</span>
@@ -125,7 +125,7 @@ export default function GoogleConnectButton() {
             variant="outline"
             size="sm"
             onClick={handleConnect}
-            className="gap-2 border-blue-500/20 hover:bg-blue-500/5 hover:border-blue-500/30 text-blue-600 dark:text-blue-400"
+            className="gap-2 border-border hover:bg-muted hover:border-border text-foreground"
         >
             <Mail className="h-4 w-4" />
             Connect Gmail

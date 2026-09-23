@@ -28,9 +28,10 @@ export default async function RootLayout({
   return (
     <html lang="en" className="h-full">
       <body className={`${sans.variable} ${serif.variable} font-sans flex min-h-full flex-col antialiased bg-background text-foreground selection:bg-highlight/60`}>
-        <main className="flex-1">
+        {/* Pages render their own <main>; a wrapper here would nest two. */}
+        <div className="flex-1">
           {children}
-        </main>
+        </div>
         <Toaster position="top-right" />
       </body>
     </html>

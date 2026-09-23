@@ -17,13 +17,6 @@ import { useProspectsV2 } from '@/lib/hooks/use-prospects-v2';
 import type { EnrollmentStatus, Sequence, SequenceStep } from '@/lib/api-types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
@@ -60,14 +53,14 @@ const ENROLLMENT_STATUS_LABEL: Record<EnrollmentStatus, string> = {
 
 const ENROLLMENT_STATUS_CLASS: Record<EnrollmentStatus, string> = {
   active:
-    'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300',
-  paused: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300',
-  completed: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300',
-  stopped_reply: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300',
+    'bg-approve/10 text-approve',
+  paused: 'bg-caution/10 text-caution',
+  completed: 'bg-muted text-foreground',
+  stopped_reply: 'bg-hold/10 text-hold',
   stopped_unsubscribe:
-    'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300',
+    'bg-hold/10 text-hold',
   stopped_bounce:
-    'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300',
+    'bg-hold/10 text-hold',
 };
 
 export function SequencesSection({ campaignId }: { campaignId: string }) {
@@ -78,21 +71,20 @@ export function SequencesSection({ campaignId }: { campaignId: string }) {
   );
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <CardTitle className="text-base">Sequences</CardTitle>
-            <CardDescription>
-              Multi-step outreach sequences for this campaign.
-            </CardDescription>
-          </div>
-          <RoleGate action="create_campaign">
-            <CreateSequenceDialog campaignId={campaignId} />
-          </RoleGate>
+    <section aria-labelledby="sequences-heading" className="space-y-4">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 id="sequences-heading" className="text-lg font-semibold">
+            Sequences
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            The emails each enrolled prospect receives, in order. Every one is drafted for your approval.
+          </p>
         </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
+        <RoleGate action="create_campaign">
+          <CreateSequenceDialog campaignId={campaignId} />
+        </RoleGate>
+      </div>
         {isLoading ? (
           <div className="space-y-2">
             <Skeleton className="h-16 w-full" />
@@ -108,8 +100,8 @@ export function SequencesSection({ campaignId }: { campaignId: string }) {
             </Button>
           </div>
         ) : !data || data.sequences.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            No sequences yet. Create one to start multi-step outreach.
+          <p className="rounded-md border border-dashed border-border px-4 py-6 text-sm text-muted-foreground">
+            No sequences yet. Create one, then enroll qualified prospects to draft their first email.
           </p>
         ) : (
           data.sequences.map((sequence) => (
@@ -120,8 +112,7 @@ export function SequencesSection({ campaignId }: { campaignId: string }) {
             />
           ))
         )}
-      </CardContent>
-    </Card>
+    </section>
   );
 }
 
@@ -180,7 +171,7 @@ function CreateSequenceDialog({ campaignId }: { campaignId: string }) {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button size="sm">
-          <Plus className="mr-1.5 h-4 w-4" /> Create Sequence
+          <Plus className="mr-1.5 h-4 w-4" /> New sequence
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-lg">
@@ -278,19 +269,28 @@ function SequenceCard({
   const enrollments = useEnrollments(workspace.id, sequence.id);
 
   return (
-    <div className="rounded-lg border p-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <p className="text-sm font-medium">{sequence.name}</p>
-          <p className="text-xs text-muted-foreground">
-            {sequence.steps.length} step{sequence.steps.length === 1 ? '' : 's'}:{' '}
-            {sequence.steps
-              .map((s) => `${s.objective} (+${s.delay_days}d)`)
-              .join(' → ')}
-          </p>
+    <div className="rounded-md border border-border bg-card p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="font-semibold">{sequence.name}</p>
+          <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm">
+            {sequence.steps.map((step) => (
+              <li key={step.step_number}>
+                {step.objective || 'No objective set'}
+                <span className="text-muted-foreground">
+                  {', '}
+                  {step.delay_days === 0
+                    ? 'sent right away'
+                    : `${step.delay_days} ${step.delay_days === 1 ? 'day' : 'days'} after the previous email`}
+                </span>
+              </li>
+            ))}
+          </ol>
         </div>
         <div className="flex items-center gap-2">
-          <Badge variant="outline">{sequence.status}</Badge>
+          <span className="inline-flex rounded-full border border-border px-2 py-0.5 text-xs font-medium capitalize text-muted-foreground">
+            {sequence.status}
+          </span>
           <RoleGate action="create_campaign">
             <EnrollDialog sequenceId={sequence.id} campaignId={campaignId} />
           </RoleGate>

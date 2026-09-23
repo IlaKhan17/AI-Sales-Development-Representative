@@ -14,18 +14,11 @@ import {
 } from '@/lib/hooks/use-icp';
 import type { IcpDefinition, IcpWeights } from '@/lib/api-types';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { FormSection, PageHeader } from '@/components/page-header';
 import { ListInput } from '@/components/ui-extras/list-input';
 import { cn } from '@/lib/utils';
 
@@ -61,7 +54,7 @@ const LIST_FIELDS: { key: keyof IcpDefinition; label: string; placeholder: strin
   { key: 'technologies', label: 'Technologies', placeholder: 'e.g. Salesforce' },
   { key: 'positive_signals', label: 'Positive signals', placeholder: 'e.g. Hiring SDRs' },
   { key: 'pain_signals', label: 'Pain signals', placeholder: 'e.g. Manual outreach complaints' },
-  { key: 'exclusions', label: 'Exclusions (deal-breakers)', placeholder: 'e.g. Agencies' },
+  { key: 'exclusions', label: 'Exclusions (a match disqualifies)', placeholder: 'e.g. agency, consulting' },
 ];
 
 const WEIGHT_FIELDS: { key: keyof IcpWeights; label: string }[] = [
@@ -120,7 +113,7 @@ export default function IcpVersionEditorPage() {
 
   if (isLoading || !hydrated) {
     return (
-      <div className="max-w-3xl space-y-4">
+      <div className="max-w-5xl space-y-4">
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-96 w-full" />
       </div>
@@ -129,9 +122,9 @@ export default function IcpVersionEditorPage() {
 
   if (isError) {
     return (
-      <div className="max-w-3xl space-y-3">
-        <p className="text-sm text-destructive">
-          Failed to load ICP profile: {error instanceof Error ? error.message : 'Unknown error'}
+      <div className="max-w-5xl space-y-3">
+        <p className="text-sm text-hold">
+          Couldn&apos;t load this profile: {error instanceof Error ? error.message : 'unknown error'}
         </p>
         <Button variant="outline" onClick={() => refetch()}>
           Retry
@@ -142,13 +135,13 @@ export default function IcpVersionEditorPage() {
 
   if (!profile || (!isNew && !sourceVersion)) {
     return (
-      <div className="max-w-3xl space-y-3">
+      <div className="max-w-5xl space-y-3">
         <p className="text-sm text-muted-foreground">
-          ICP profile or version not found.
+          This profile or version doesn&apos;t exist in this workspace.
         </p>
         <Button variant="outline" asChild>
           <Link href={`/w/${workspace.id}/icp`}>
-            <ArrowLeft className="mr-2 h-4 w-4" /> Back to ICP
+            <ArrowLeft className="mr-2 h-4 w-4" /> Ideal customer
           </Link>
         </Button>
       </div>
@@ -178,50 +171,37 @@ export default function IcpVersionEditorPage() {
     setDefinition((d) => ({ ...d, [key]: next }));
 
   return (
-    <div className="max-w-3xl space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="space-y-1">
-          <Button variant="ghost" size="sm" asChild className="-ml-2">
-            <Link href={`/w/${workspace.id}/icp`}>
-              <ArrowLeft className="mr-2 h-4 w-4" /> Back to ICP
-            </Link>
-          </Button>
-          <h1 className="flex items-center gap-3 text-2xl font-semibold tracking-tight">
-            {profile.name}
-            {sourceVersion ? (
-              <>
-                <span className="text-muted-foreground">v{sourceVersion.version}</span>
-                <Badge
-                  variant={sourceVersion.status === 'active' ? 'default' : 'outline'}
-                  className="capitalize"
-                >
-                  {sourceVersion.status}
-                </Badge>
-              </>
-            ) : (
-              <Badge variant="secondary">New draft</Badge>
-            )}
-          </h1>
-          {editingImmutable && canEdit && (
-            <p className="text-sm text-muted-foreground">
-              This version is {sourceVersion?.status} and immutable — saving
-              creates a new draft version pre-filled from it.
-            </p>
-          )}
-          {!canEdit && (
-            <p className="text-sm text-muted-foreground">
-              Read-only — you need admin access to edit ICPs.
-            </p>
-          )}
-        </div>
-      </div>
+    <div className="max-w-5xl space-y-8">
+      <PageHeader
+        back={{ href: `/w/${workspace.id}/icp`, label: 'Ideal customer' }}
+        title={sourceVersion ? `${profile.name}, version ${sourceVersion.version}` : `${profile.name}, new draft`}
+        status={
+          sourceVersion ? (
+            <span
+              className={cn(
+                'inline-flex rounded-full border px-2 py-0.5 text-xs font-medium capitalize',
+                sourceVersion.status === 'active'
+                  ? 'border-approve/30 bg-approve/10 text-approve'
+                  : 'border-dashed border-border text-muted-foreground'
+              )}
+            >
+              {sourceVersion.status}
+            </span>
+          ) : undefined
+        }
+        description={
+          !canEdit
+            ? 'Read only. Only owners and admins can change the ideal customer.'
+            : editingImmutable
+              ? `Version ${sourceVersion?.version} is locked. Saving creates a new draft that starts from it.`
+              : 'Describe who to look for and how much each part of the match counts.'
+        }
+      />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Definition</CardTitle>
-          <CardDescription>Who Davis should look for.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-5">
+      <FormSection
+        title="Who to look for"
+        description="Each list is matched against facts found about a prospect. Write exclusions as single words that would appear in a fact, like agency rather than agencies."
+      >
           {LIST_FIELDS.map(({ key, label, placeholder }) => (
             <div key={key} className="space-y-2">
               <Label>{label}</Label>
@@ -267,34 +247,41 @@ export default function IcpVersionEditorPage() {
               />
             </div>
           </div>
-        </CardContent>
-      </Card>
+      </FormSection>
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Scoring weights</CardTitle>
-              <CardDescription>Must sum to exactly 100.</CardDescription>
-            </div>
+      <FormSection
+        title="How much each part counts"
+        description="Split 100 points across the parts of a match. A prospect's score is the points it earns."
+      >
+        <div className="space-y-2">
+          <div className="flex items-baseline justify-between">
+            <span className="text-sm font-medium">Points allocated</span>
             <span
               className={cn(
-                'text-sm font-medium tabular-nums',
-                total === 100 ? 'text-emerald-500' : 'text-destructive'
+                'text-sm font-semibold',
+                total === 100 ? 'text-approve' : 'text-hold'
               )}
             >
-              total = {total}/100
+              {total} of 100
             </span>
           </div>
-        </CardHeader>
-        <CardContent className="space-y-6">
+          <div className="flex h-2 w-full gap-px overflow-hidden rounded-sm bg-muted" aria-hidden>
+            {WEIGHT_FIELDS.map(({ key }, i) =>
+              weights[key] > 0 ? (
+                <div
+                  key={key}
+                  className={i % 2 === 0 ? 'bg-foreground/80' : 'bg-foreground/45'}
+                  style={{ width: `${Math.min(weights[key], 100)}%` }}
+                />
+              ) : null
+            )}
+          </div>
+        </div>
           {WEIGHT_FIELDS.map(({ key, label }) => (
             <div key={key} className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label>{label}</Label>
-                <span className="text-sm tabular-nums text-muted-foreground">
-                  {weights[key]}
-                </span>
+                <span className="text-sm font-semibold">{weights[key]}</span>
               </div>
               <Slider
                 value={[weights[key]]}
@@ -308,14 +295,13 @@ export default function IcpVersionEditorPage() {
               />
             </div>
           ))}
-        </CardContent>
-      </Card>
+      </FormSection>
 
       {canEdit && (
         <div className="flex items-center justify-end gap-3">
           {total !== 100 && (
-            <p className="text-sm text-destructive">
-              Adjust weights to total exactly 100 before saving.
+            <p className="text-sm text-hold">
+              The points must add up to exactly 100 before you can save.
             </p>
           )}
           <Button

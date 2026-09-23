@@ -74,11 +74,11 @@ export default function MembersPage() {
   };
 
   return (
-    <div className="max-w-3xl space-y-6">
+    <div className="max-w-4xl space-y-8">
       <SettingsNav />
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Members</h1>
+          <h2 className="text-lg font-semibold">Members</h2>
           <p className="text-sm text-muted-foreground">
             People with access to this workspace.
           </p>
@@ -159,6 +159,7 @@ export default function MembersPage() {
       ) : !data || data.members.length === 0 ? (
         <p className="text-sm text-muted-foreground">No members yet.</p>
       ) : (
+        <div className="overflow-x-auto rounded-md border border-border bg-card">
         <Table>
           <TableHeader>
             <TableRow>
@@ -234,6 +235,7 @@ export default function MembersPage() {
             ))}
           </TableBody>
         </Table>
+        </div>
       )}
     </div>
   );

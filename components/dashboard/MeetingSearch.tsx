@@ -66,7 +66,7 @@ export function MeetingSearch() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyPress={handleKeyPress}
-              className="pl-9 bg-background/50 border-border/50 focus:bg-background transition-colors"
+              className="pl-9 bg-background/50 border-border focus:bg-background transition-colors"
             />
           </div>
           <Button onClick={searchKnowledgeBase} disabled={loading} size="sm">
@@ -81,20 +81,20 @@ export function MeetingSearch() {
 
         {searchResult && (
           <div className="mt-4 space-y-4">
-            <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
+            <div className="rounded-lg border border-border bg-muted p-4">
               <h3 className="text-sm font-medium mb-2 text-foreground">Answer</h3>
               <p className="text-sm text-muted-foreground whitespace-pre-line leading-relaxed">{searchResult.response}</p>
             </div>
 
             {searchResult.sources.length > 0 && (
               <div>
-                <h3 className="text-sm font-medium mb-2 text-muted-foreground uppercase tracking-wider">Sources</h3>
+                <h3 className="text-sm font-medium mb-2 text-muted-foreground">Sources</h3>
                 <ScrollArea className="h-[150px]">
                   <div className="space-y-2">
                     {searchResult.sources.map((source, index) => (
                       <div
                         key={index}
-                        className="rounded-lg border border-border/50 bg-card/50 p-3 cursor-pointer hover:bg-card/80 hover:border-border transition-all"
+                        className="rounded-lg border border-border bg-card p-3 cursor-pointer hover:bg-card hover:border-border transition-all"
                         onClick={() => {
                           const meeting = meetings.find((m: any) => m.id === source.meeting_id);
                           if (meeting) {

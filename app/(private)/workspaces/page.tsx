@@ -74,9 +74,9 @@ export default function WorkspacesPage() {
       <div className="grid gap-4">
         {workspaces.map((ws) => (
           <Link key={ws.id} href={`/w/${ws.id}/dashboard`}>
-            <Card className="transition-colors hover:border-primary/50">
+            <Card className="transition-colors hover:border-border">
               <CardHeader className="flex flex-row items-center gap-4 space-y-0">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
                   <Building2 className="h-5 w-5 text-primary" />
                 </div>
                 <div className="flex-1">

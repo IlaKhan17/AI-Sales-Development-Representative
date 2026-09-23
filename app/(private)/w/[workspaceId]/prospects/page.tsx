@@ -1,5 +1,5 @@
 import ProspectList from "@/components/ProspectList"
-import { Users } from 'lucide-react'
+import { PageHeader } from "@/components/page-header"
 
 export default async function ProspectsPage() {
   // Prospects are loaded client-side from the API (per-user); the old Redis
@@ -7,24 +7,12 @@ export default async function ProspectsPage() {
   const prospects: never[] = []
 
   return (
-    <div className="flex flex-col gap-8">
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-            <Users className="h-5 w-5 text-primary" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-              Prospects
-            </h1>
-            <p className="text-muted-foreground">
-              Manage your leads and find new opportunities
-            </p>
-          </div>
-        </div>
-      </div>
+    <div className="space-y-8">
+      <PageHeader
+        title="Prospects"
+        description="Quick searches outside a campaign. Pick a search to see who it found, or start a new one from a job description."
+      />
       <ProspectList initialProspects={prospects} />
     </div>
   )
 }
-

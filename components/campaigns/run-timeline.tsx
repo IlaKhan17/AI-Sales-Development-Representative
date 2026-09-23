@@ -13,12 +13,12 @@ function StepIcon({ status }: { status: string }) {
   switch (status) {
     case 'completed':
     case 'success':
-      return <CheckCircle2 className="h-4 w-4 text-emerald-500" />;
+      return <CheckCircle2 className="h-4 w-4 text-approve" />;
     case 'failed':
     case 'error':
-      return <XCircle className="h-4 w-4 text-red-500" />;
+      return <XCircle className="h-4 w-4 text-hold" />;
     case 'running':
-      return <Loader2 className="h-4 w-4 animate-spin text-blue-500" />;
+      return <Loader2 className="h-4 w-4 animate-spin text-foreground" />;
     default:
       return <CircleDashed className="h-4 w-4 text-muted-foreground" />;
   }
@@ -41,8 +41,8 @@ export function RunTimeline({
         <span
           className={cn(
             'font-medium capitalize',
-            run.status === 'failed' && 'text-red-600 dark:text-red-400',
-            run.status === 'completed' && 'text-emerald-600 dark:text-emerald-400'
+            run.status === 'failed' && 'text-hold',
+            run.status === 'completed' && 'text-approve'
           )}
         >
           {run.status}
@@ -59,7 +59,7 @@ export function RunTimeline({
         )}
       </div>
       {run.error && (
-        <p className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
+        <p className="rounded-md border border-hold/30 bg-hold/10 p-3 text-sm text-hold">
           {run.error}
         </p>
       )}

@@ -187,7 +187,7 @@ export function MeetingNotes({ initialMeetings }: { initialMeetings: Meeting[] }
     <div className="grid gap-6 fade-in-bottom">
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+          <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center">
             <Video className="h-5 w-5 text-primary" />
           </div>
           <div>
@@ -202,7 +202,7 @@ export function MeetingNotes({ initialMeetings }: { initialMeetings: Meeting[] }
               Add Meeting Bot
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px] glass-card border-none shadow-2xl">
+          <DialogContent className="sm:max-w-[500px] glass-card border-none">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Bot className="h-5 w-5 text-primary" />
@@ -255,7 +255,7 @@ export function MeetingNotes({ initialMeetings }: { initialMeetings: Meeting[] }
         <Card className="glass-card flex flex-col h-[400px]">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Video className="h-4 w-4 text-blue-500" />
+              <Video className="h-4 w-4 text-foreground" />
               Active Meetings
             </CardTitle>
             <CardDescription>Currently monitored meetings</CardDescription>
@@ -268,13 +268,13 @@ export function MeetingNotes({ initialMeetings }: { initialMeetings: Meeting[] }
                 meetings.filter((m) => m.status === 'active').map((meeting) => (
                   <div
                     key={meeting.id}
-                    className="flex items-center justify-between p-4 mb-3 rounded-lg border bg-card/50 hover:bg-card/80 transition-all group"
+                    className="flex items-center justify-between p-4 mb-3 rounded-lg border bg-card hover:bg-card transition-all group"
                   >
                     <div className="grid gap-1">
                       <div className="font-medium flex items-center gap-2">
                         <span className="relative flex h-2 w-2">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                          <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-approve opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-approve"></span>
                         </span>
                         {meeting.title || "Untitled Meeting"}
                       </div>
@@ -300,7 +300,7 @@ export function MeetingNotes({ initialMeetings }: { initialMeetings: Meeting[] }
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  <CheckCircle2 className="h-4 w-4 text-approve" />
                   Completed Meetings
                 </CardTitle>
                 <CardDescription>Past meetings with analysis</CardDescription>
@@ -329,7 +329,7 @@ export function MeetingNotes({ initialMeetings }: { initialMeetings: Meeting[] }
                 meetings.filter((m) => m.status === 'completed').map((meeting) => (
                   <div
                     key={meeting.id}
-                    className="flex items-center justify-between p-4 mb-3 rounded-lg border bg-card/50 hover:bg-card/80 transition-all cursor-pointer group"
+                    className="flex items-center justify-between p-4 mb-3 rounded-lg border bg-card hover:bg-card transition-all cursor-pointer group"
                     onClick={() => getMeetingData(meeting)}
                   >
                     <div className="grid gap-1">
@@ -372,7 +372,7 @@ export function MeetingNotes({ initialMeetings }: { initialMeetings: Meeting[] }
                   {new Date(selectedMeeting.date || '').toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                 </CardDescription>
               </div>
-              <Badge variant="secondary" className="px-3 py-1 bg-primary/10 text-primary border-primary/20">
+              <Badge variant="secondary" className="px-3 py-1 bg-muted text-primary border-border">
                 {meetingData.sentiment} Sentiment
               </Badge>
             </div>
@@ -382,25 +382,25 @@ export function MeetingNotes({ initialMeetings }: { initialMeetings: Meeting[] }
               <AccordionItem value="summary" className="border-b-0 mb-4 bg-muted/30 rounded-lg px-4 border">
                 <AccordionTrigger className="hover:no-underline py-4">
                   <div className="flex items-center gap-2 font-semibold">
-                    <BrainCircuit className="h-4 w-4 text-purple-500" />
+                    <BrainCircuit className="h-4 w-4 text-muted-foreground" />
                     AI Summary & Insights
                   </div>
                 </AccordionTrigger>
                 <AccordionContent className="pb-4">
                   <div className="space-y-6">
                     <div>
-                      <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-2">Executive Summary</h4>
+                      <h4 className="text-sm font-medium text-muted-foreground mb-2">Executive Summary</h4>
                       <p className="leading-relaxed bg-background/50 p-3 rounded-md border">{meetingData.summary}</p>
                     </div>
 
                     <div className="grid md:grid-cols-2 gap-6">
                       <div>
-                        <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-2">
+                        <h4 className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
                           <AlertCircle className="h-3 w-3" /> Key Insights
                         </h4>
                         <ul className="space-y-2">
                           {meetingData.keyInsights.map((insight, index) => (
-                            <li key={index} className="text-sm p-2 rounded bg-blue-500/5 border-l-2 border-blue-500">
+                            <li key={index} className="text-sm p-2 rounded bg-muted border-l-2 border-border">
                               {insight}
                             </li>
                           ))}
@@ -408,12 +408,12 @@ export function MeetingNotes({ initialMeetings }: { initialMeetings: Meeting[] }
                       </div>
 
                       <div>
-                        <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-2">
+                        <h4 className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
                           <CheckCircle2 className="h-3 w-3" /> Action Items
                         </h4>
                         <ul className="space-y-2">
                           {meetingData.actionItems.map((item, index) => (
-                            <li key={index} className="text-sm p-2 rounded bg-green-500/5 border-l-2 border-green-500">
+                            <li key={index} className="text-sm p-2 rounded bg-approve/10 border-l-2 border-approve/30">
                               {item}
                             </li>
                           ))}
@@ -427,7 +427,7 @@ export function MeetingNotes({ initialMeetings }: { initialMeetings: Meeting[] }
               <AccordionItem value="transcript" className="border-b-0 bg-muted/30 rounded-lg px-4 border">
                 <AccordionTrigger className="hover:no-underline py-4">
                   <div className="flex items-center gap-2 font-semibold">
-                    <FileText className="h-4 w-4 text-blue-500" />
+                    <FileText className="h-4 w-4 text-foreground" />
                     Full Transcript
                   </div>
                 </AccordionTrigger>
