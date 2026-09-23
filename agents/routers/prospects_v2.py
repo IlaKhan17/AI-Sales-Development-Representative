@@ -37,7 +37,11 @@ async def list_prospects(
     ctx: WorkspaceContext = Depends(get_workspace_context),
 ):
     db = get_supabase_admin()
-    q = db.table("prospects_v2").select("*").eq("workspace_id", ctx.workspace_id)
+    q = (
+        db.table("prospects_v2")
+        .select("*, company:companies(name, domain)")
+        .eq("workspace_id", ctx.workspace_id)
+    )
     if campaign_id:
         q = q.eq("campaign_id", campaign_id)
     if status:

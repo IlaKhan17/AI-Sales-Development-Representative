@@ -20,6 +20,35 @@ EMAIL_PROMPT_IDS = ["email_subject", "email_content", "email_refine", "email_fin
 def _email_prompt_versions() -> Dict[str, int]:
     return {pid: load_prompt(pid).version for pid in EMAIL_PROMPT_IDS}
 
+# Used only when the workspace has no product profile (legacy endpoints, evals).
+DEFAULT_SENDER_COMPANY = "our team"
+
+
+def _fallback_subject(state: "EmailState") -> str:
+    return f"A quick idea for {state['prospect']['company'] or 'your team'}"
+
+
+def _fallback_content(state: "EmailState") -> str:
+    p = state["prospect"]
+    pains = ", ".join(p["pain_points"]) or "your current priorities"
+    sign_off = "\n".join(
+        v for v in (state.get("sender_name"), state.get("sender_title"), state["sender_company"]) if v
+    )
+    return (
+        f"Dear {p['author']},\n\nI noticed your focus on {pains} at {p['company']}. "
+        f"{state['sender_company']} may be able to help with these challenges.\n\n"
+        f"Could we schedule a brief call to discuss?\n\nBest regards,\n{sign_off}"
+    )
+
+
+def _strip_subject_line(text: str) -> str:
+    """Drop a leading 'Subject: ...' line the model sometimes echoes into the body."""
+    lines = text.lstrip().splitlines()
+    if lines and lines[0].lower().startswith("subject:"):
+        lines = lines[1:]
+    return "\n".join(lines).lstrip()
+
+
 class ProspectData(TypedDict):
     author: str
     role: str
@@ -41,6 +70,8 @@ class EmailState(TypedDict):
     should_continue: bool
     run_id: Optional[str]
     sender_name: Optional[str]
+    sender_title: Optional[str]
+    sender_company: str
     prompt_versions: Dict[str, int]
 
 class EmailDraft(TypedDict):
@@ -110,6 +141,7 @@ class EmailService:
                 industry=state['prospect']['industry'],
                 solution_fit=state['prospect']['solution_fit'],
                 insights=state['prospect']['insights'],
+                sender_company=state['sender_company'],
             )
             messages = [SystemMessage(content=rp.system), HumanMessage(content=rp.user)]
 
@@ -139,9 +171,9 @@ class EmailService:
                         subject_text = subject_text.strip('":,\n {}').strip()
                         state['subject'] = subject_text
                     except Exception:
-                        state['subject'] = "Simplify Your Data Governance with Atlan"
+                        state['subject'] = _fallback_subject(state)
                 else:
-                    state['subject'] = "Simplify Your Data Governance with Atlan"
+                    state['subject'] = _fallback_subject(state)
 
             return state
 
@@ -150,7 +182,7 @@ class EmailService:
             logger.error(f"State: {state}")
             logger.error(f"Response: {response.content if 'response' in locals() else 'No response'}")
             # Provide a fallback subject
-            state['subject'] = "Atlan: Modern Data Governance Solution"
+            state['subject'] = _fallback_subject(state)
             return state
 
     async def content_builder_agent(self, state: EmailState) -> EmailState:
@@ -193,7 +225,7 @@ class EmailService:
                 if "Dear" in cleaned_response or state['prospect']['author'] in cleaned_response:
                     state['content'] = cleaned_response
                 else:
-                    state['content'] = f"Dear {state['prospect']['author']},\n\nI noticed your focus on {', '.join(state['prospect']['pain_points'])} at {state['prospect']['company']}. Atlan's data catalog and governance platform directly addresses these challenges with our comprehensive solution.\n\nCould we schedule a brief call to discuss how Atlan has helped similar companies in the {state['prospect']['industry']} industry?\n\nBest regards,\n[Your Name]\nSales Development Representative\nAtlan"
+                    state['content'] = _fallback_content(state)
 
             return state
 
@@ -202,7 +234,7 @@ class EmailService:
             logger.error(f"State: {state}")
             logger.error(f"Response: {response.content if 'response' in locals() else 'No response'}")
             # Fallback: provide a generic content
-            state['content'] = f"Dear {state['prospect']['author']},\n\nI noticed your focus on {', '.join(state['prospect']['pain_points'])} at {state['prospect']['company']}. Atlan's data catalog and governance platform directly addresses these challenges with our comprehensive solution.\n\nCould we schedule a brief call to discuss how Atlan has helped similar companies in the {state['prospect']['industry']} industry?\n\nBest regards,\n[Your Name]\nSales Development Representative\nAtlan"
+            state['content'] = _fallback_content(state)
             return state
 
     async def content_refiner_agent(self, state: EmailState) -> EmailState:
@@ -256,9 +288,14 @@ class EmailService:
     async def final_draft_agent(self, state: EmailState) -> EmailState:
         """Agent responsible for creating the final email draft"""
         try:
-            sender_name = state.get("sender_name")
-            sender_name_line = (
-                f"                Name: {sender_name}\n" if sender_name else ""
+            sender_lines = "\n".join(
+                f"                  {label}: {value}"
+                for label, value in (
+                    ("Name", state.get("sender_name")),
+                    ("Title", state.get("sender_title")),
+                    ("Company", state["sender_company"]),
+                )
+                if value
             )
             rp = render(
                 "email_final",
@@ -267,14 +304,14 @@ class EmailService:
                 author=state['prospect']['author'],
                 role=state['prospect']['role'],
                 company=state['prospect']['company'],
-                sender_name_line=sender_name_line,
+                sender_lines=sender_lines,
             )
             messages = [SystemMessage(content=rp.system), HumanMessage(content=rp.user)]
 
             response = await self.llm_service.llm.ainvoke(messages)
 
             # Simply use the raw response content without JSON parsing
-            state['final_email'] = response.content.strip()
+            state['final_email'] = _strip_subject_line(response.content.strip())
 
             # Log for debugging
             logger.debug(f"Final email content: {state['final_email']}")
@@ -293,6 +330,8 @@ class EmailService:
         self,
         prospect: Dict,
         sender_name: Optional[str] = None,
+        sender_title: Optional[str] = None,
+        sender_company: Optional[str] = None,
         user_id: Optional[str] = None,
         workspace_id: Optional[str] = None,
     ) -> EmailDraft:
@@ -330,6 +369,8 @@ class EmailService:
                 "should_continue": True,
                 "run_id": run_id,
                 "sender_name": sender_name,
+                "sender_title": sender_title,
+                "sender_company": sender_company or DEFAULT_SENDER_COMPANY,
                 "prompt_versions": prompt_versions,
             }
 
@@ -384,6 +425,8 @@ class EmailService:
                 "should_continue": True,
                 "run_id": None,
                 "sender_name": None,
+                "sender_title": None,
+                "sender_company": DEFAULT_SENDER_COMPANY,
                 "prompt_versions": _email_prompt_versions(),
             }
 
