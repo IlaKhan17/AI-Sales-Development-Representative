@@ -1,16 +1,19 @@
 import type React from "react"
 import type { Metadata } from "next"
-import { Inter } from 'next/font/google'
+import { Newsreader, Schibsted_Grotesk } from 'next/font/google'
 import "./globals.css"
 import { createClient } from "@/utils/supabase/server"
 import Header from "@/components/Header"
 import { Toaster } from "sonner"
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-sans" })
+// UI voice: a newsroom grotesk. Serif is reserved for words that come from
+// outside the app: cited evidence and the email letters awaiting approval.
+const sans = Schibsted_Grotesk({ subsets: ["latin"], variable: "--font-sans" })
+const serif = Newsreader({ subsets: ["latin"], variable: "--font-serif", style: ["normal", "italic"] })
 
 export const metadata: Metadata = {
-  title: "Davis — AI Sales Development Representative",
-  description: "Automate your outbound sales pipeline. Find prospects, personalize outreach, and close more deals.",
+  title: "Davis",
+  description: "Davis finds prospects, cites the evidence behind every score, and drafts outreach that waits for your approval.",
 }
 
 export default async function RootLayout({
@@ -23,8 +26,8 @@ export default async function RootLayout({
   const user = data.user
 
   return (
-    <html lang="en" className="h-full dark">
-      <body className={`${inter.variable} font-sans flex min-h-full flex-col antialiased bg-background text-foreground selection:bg-primary/20`}>
+    <html lang="en" className="h-full">
+      <body className={`${sans.variable} ${serif.variable} font-sans flex min-h-full flex-col antialiased bg-background text-foreground selection:bg-highlight/60`}>
         <main className="flex-1">
           {children}
         </main>

@@ -10,7 +10,8 @@ export default {
 	theme: {
 		extend: {
 			fontFamily: {
-				sans: ["var(--font-sans)", "sans-serif"],
+				sans: ["var(--font-sans)", "ui-sans-serif", "system-ui", "sans-serif"],
+				serif: ["var(--font-serif)", "Georgia", "serif"],
 			},
 			colors: {
 				background: 'hsl(var(--background))',
@@ -43,6 +44,16 @@ export default {
 					DEFAULT: 'hsl(var(--destructive))',
 					foreground: 'hsl(var(--destructive-foreground))'
 				},
+				approve: {
+					DEFAULT: 'hsl(var(--approve))',
+					foreground: 'hsl(var(--approve-foreground))'
+				},
+				hold: {
+					DEFAULT: 'hsl(var(--hold))',
+					foreground: 'hsl(var(--hold-foreground))'
+				},
+				caution: 'hsl(var(--caution))',
+				highlight: 'hsl(var(--highlight))',
 				border: 'hsl(var(--border))',
 				input: 'hsl(var(--input))',
 				ring: 'hsl(var(--ring))',

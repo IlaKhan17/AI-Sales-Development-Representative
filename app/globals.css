@@ -2,86 +2,66 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Davis — "case file" theme.
+ * Cool index-card paper, navy ink, rules instead of shadows. Highlighter
+ * yellow is reserved for cited evidence; approve/hold carry the two outcomes
+ * of a human decision.
+ *
+ *   paper     #EEF1F4  page ground
+ *   sheet     #F8F9FB  surfaces laid on the page
+ *   ink       #1C2433  text, primary actions
+ *   graphite  #5B6474  secondary text
+ *   rule      #D3D9E1  borders and dividers
+ *   highlight #F2DE5C  evidence only
+ *   approve   #0F7B6C  approve / qualified
+ *   hold      #B8412A  block / disqualify / destructive
+ *   caution   #9A6A12  needs a human look
+ */
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 220 14% 10%;
-    --card: 0 0% 100%;
-    --card-foreground: 220 14% 10%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 220 14% 10%;
-    --primary: 220 14% 10%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 220 14% 96%;
-    --secondary-foreground: 220 14% 10%;
-    --muted: 220 14% 96%;
-    --muted-foreground: 220 9% 46%;
-    --accent: 220 14% 96%;
-    --accent-foreground: 220 14% 10%;
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 220 14% 10%;
-    --radius: 0.625rem;
+    --background: 210 21% 95%;
+    --foreground: 219 29% 15%;
+    --card: 220 27% 98%;
+    --card-foreground: 219 29% 15%;
+    --popover: 220 27% 98%;
+    --popover-foreground: 219 29% 15%;
+    --primary: 219 29% 15%;
+    --primary-foreground: 220 27% 98%;
+    --secondary: 214 22% 90%;
+    --secondary-foreground: 219 29% 15%;
+    --muted: 214 22% 91%;
+    --muted-foreground: 218 12% 41%;
+    --accent: 214 22% 90%;
+    --accent-foreground: 219 29% 15%;
+    --destructive: 10 63% 44%;
+    --destructive-foreground: 220 27% 98%;
+    --border: 214 19% 85%;
+    --input: 214 19% 80%;
+    --ring: 219 29% 15%;
+    --radius: 0.375rem;
 
-    --chart-1: 221 83% 53%;
-    --chart-2: 142 71% 45%;
-    --chart-3: 262 83% 58%;
-    --chart-4: 31 97% 52%;
-    --chart-5: 339 82% 51%;
+    --approve: 172 78% 27%;
+    --approve-foreground: 220 27% 98%;
+    --hold: 10 63% 44%;
+    --hold-foreground: 220 27% 98%;
+    --caution: 39 79% 34%;
+    --highlight: 52 85% 65%;
 
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 220 14% 10%;
-    --sidebar-primary: 220 14% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 220 14% 96%;
-    --sidebar-accent-foreground: 220 14% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 221 83% 53%;
-  }
+    --chart-1: 219 29% 15%;
+    --chart-2: 172 78% 27%;
+    --chart-3: 218 12% 55%;
+    --chart-4: 39 79% 34%;
+    --chart-5: 10 63% 44%;
 
-  .dark {
-    --background: 224 28% 6%;
-    --foreground: 210 20% 95%;
-    --card: 224 24% 8%;
-    --card-foreground: 210 20% 95%;
-    --popover: 224 24% 8%;
-    --popover-foreground: 210 16% 76%;
-
-    --primary: 221 83% 53%;
-    --primary-foreground: 0 0% 100%;
-
-    --secondary: 222 20% 12%;
-    --secondary-foreground: 210 20% 95%;
-
-    --muted: 222 18% 12%;
-    --muted-foreground: 215 14% 52%;
-
-    --accent: 222 18% 14%;
-    --accent-foreground: 210 20% 95%;
-
-    --destructive: 0 63% 45%;
-    --destructive-foreground: 0 0% 98%;
-
-    --border: 222 14% 16%;
-    --input: 222 14% 16%;
-    --ring: 221 83% 53%;
-
-    --chart-1: 221 83% 53%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 262 83% 58%;
-    --chart-4: 31 97% 52%;
-    --chart-5: 339 82% 51%;
-
-    --sidebar-background: 224 28% 6%;
-    --sidebar-foreground: 210 20% 95%;
-    --sidebar-primary: 221 83% 53%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 222 18% 12%;
-    --sidebar-accent-foreground: 210 20% 95%;
-    --sidebar-border: 222 14% 16%;
-    --sidebar-ring: 221 83% 53%;
+    --sidebar-background: 214 22% 91%;
+    --sidebar-foreground: 219 29% 15%;
+    --sidebar-primary: 219 29% 15%;
+    --sidebar-primary-foreground: 220 27% 98%;
+    --sidebar-accent: 220 27% 98%;
+    --sidebar-accent-foreground: 219 29% 15%;
+    --sidebar-border: 214 19% 85%;
+    --sidebar-ring: 219 29% 15%;
   }
 }
 
@@ -92,13 +72,54 @@
   body {
     @apply bg-background text-foreground antialiased;
   }
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
 }
 
 @layer utilities {
+  /* Legacy class names kept so existing pages pick up the new surface style:
+     a flat sheet with a rule, no blur, no hover shadow. */
   .glass {
-    @apply bg-white/5 backdrop-blur-lg border border-white/10 shadow-xl;
+    @apply bg-card border border-border;
   }
   .glass-card {
-    @apply bg-card/80 backdrop-blur-xl border-border/50 shadow-sm transition-all hover:shadow-md hover:border-border;
+    @apply bg-card border border-border;
+  }
+  .fade-in-bottom {
+    animation: none;
+  }
+
+  /* Evidence quote: serif, marked like a highlighter pass over the source. */
+  .evidence-quote {
+    @apply font-serif text-[0.95rem] leading-relaxed text-foreground;
+  }
+  .evidence-mark {
+    background: linear-gradient(
+      transparent 12%,
+      hsl(var(--highlight) / 0.38) 12%,
+      hsl(var(--highlight) / 0.38) 88%,
+      transparent 88%
+    );
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+    padding: 0 0.12em;
+  }
+  .tabular {
+    font-variant-numeric: tabular-nums;
   }
 }

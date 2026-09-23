@@ -11,20 +11,16 @@ export const PROSPECT_STATUS_LABELS: Record<ProspectV2Status, string> = {
   disqualified: 'Disqualified',
 };
 
+// Two decisive outcomes get the approve/hold colors; states still in motion
+// stay neutral ink so the eye lands on what needs a decision.
 const STATUS_TONES: Record<ProspectV2Status, string> = {
-  discovered:
-    'bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300 border-sky-200 dark:border-sky-900',
-  researching:
-    'bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-300 border-violet-200 dark:border-violet-900',
-  scored:
-    'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300 border-blue-200 dark:border-blue-900',
-  qualified:
-    'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border-emerald-200 dark:border-emerald-900',
-  needs_review:
-    'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border-amber-200 dark:border-amber-900',
-  insufficient_evidence: 'bg-muted text-muted-foreground border-border',
-  disqualified:
-    'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300 border-red-200 dark:border-red-900',
+  discovered: 'bg-card text-muted-foreground border-border',
+  researching: 'bg-card text-muted-foreground border-border',
+  scored: 'bg-card text-foreground border-border',
+  qualified: 'bg-approve/10 text-approve border-approve/30',
+  needs_review: 'bg-caution/10 text-caution border-caution/30',
+  insufficient_evidence: 'bg-transparent text-muted-foreground border-dashed border-border',
+  disqualified: 'bg-hold/10 text-hold border-hold/30',
 };
 
 /** Color-coded chip for a prospect pipeline status. */

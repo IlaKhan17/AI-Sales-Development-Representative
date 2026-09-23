@@ -1,6 +1,6 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { RefreshCw, Users } from 'lucide-react';
 
 import type { ProspectV2, ProspectV2Status } from '@/lib/api-types';
@@ -39,7 +39,6 @@ export function ProspectsTable({
   campaignId: string;
   poll?: boolean;
 }) {
-  const router = useRouter();
   const { workspace } = useWorkspace();
   const [status, setStatus] = useState<ProspectsV2Filters['status']>('all');
   const { data, isLoading, isError, error, refetch } = useProspectsV2(
@@ -48,7 +47,10 @@ export function ProspectsTable({
     { poll }
   );
 
-  const prospects: ProspectV2[] = data?.prospects ?? [];
+  // Strongest leads first; unscored ones sink to the bottom.
+  const prospects: ProspectV2[] = [...(data?.prospects ?? [])].sort(
+    (a, b) => (b.score_total ?? -1) - (a.score_total ?? -1)
+  );
 
   return (
     <div className="space-y-4">
@@ -81,8 +83,8 @@ export function ProspectsTable({
           </Button>
         </div>
       ) : prospects.length === 0 ? (
-        <div className="rounded-md border border-dashed p-10 text-center">
-          <Users className="mx-auto h-8 w-8 text-muted-foreground/50" />
+        <div className="rounded-md border border-dashed border-border p-10 text-center">
+          <Users className="mx-auto h-6 w-6 text-muted-foreground" />
           <p className="mt-3 text-sm text-muted-foreground">
             {status && status !== 'all'
               ? `No prospects with status "${PROSPECT_STATUS_LABELS[status]}" yet.`
@@ -90,11 +92,11 @@ export function ProspectsTable({
           </p>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-md border">
+        <div className="overflow-x-auto rounded-md border border-border bg-card">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
+                <TableHead className="min-w-[9rem]">Name</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead>Company</TableHead>
                 <TableHead className="w-20 text-right">Score</TableHead>
@@ -104,18 +106,19 @@ export function ProspectsTable({
             </TableHeader>
             <TableBody>
               {prospects.map((p) => (
-                <TableRow
-                  key={p.id}
-                  className="cursor-pointer"
-                  onClick={() =>
-                    router.push(`/w/${workspace.id}/prospects/${p.id}`)
-                  }
-                >
-                  <TableCell className="font-medium">{p.full_name}</TableCell>
+                <TableRow key={p.id} className="group">
+                  <TableCell className="whitespace-nowrap font-medium">
+                    <Link
+                      href={`/w/${workspace.id}/prospects/${p.id}`}
+                      className="underline decoration-transparent underline-offset-2 group-hover:decoration-foreground"
+                    >
+                      {p.full_name}
+                    </Link>
+                  </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {p.role_title || '—'}
                   </TableCell>
-                  <TableCell className="text-sm">
+                  <TableCell className="min-w-[10rem] text-sm">
                     {p.company ? (
                       <span>
                         {p.company.name}
@@ -129,8 +132,12 @@ export function ProspectsTable({
                       '—'
                     )}
                   </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {p.score_total ?? '—'}
+                  <TableCell className="text-right font-semibold">
+                    {p.score_total == null
+                      ? '—'
+                      : Number.isInteger(p.score_total)
+                        ? p.score_total
+                        : p.score_total.toFixed(1)}
                   </TableCell>
                   <TableCell>
                     <StatusChip status={p.status} />
