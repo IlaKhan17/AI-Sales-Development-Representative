@@ -236,7 +236,7 @@ export default function ProspectList({ initialProspects }: ProspectListProps) {
               New Project
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px]">
+          <DialogContent className="sm:max-w-[500px] max-h-[90dvh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Find New Prospects</DialogTitle>
               <DialogDescription>

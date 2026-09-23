@@ -287,7 +287,7 @@ export default function ProspectPreferencesForm({ onSubmit, isLoading }: Prospec
                     <span className="flex items-center gap-2">
                         <Target className="h-4 w-4 text-primary" />
                         ICP Configuration
-                        <span className="text-xs text-muted-foreground font-normal">(optional — improves lead scoring)</span>
+                        <span className="hidden text-xs text-muted-foreground font-normal sm:inline">(optional — improves lead scoring)</span>
                     </span>
                     {showICP ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
                 </button>
@@ -304,7 +304,7 @@ export default function ProspectPreferencesForm({ onSubmit, isLoading }: Prospec
                             />
                         </div>
 
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                             <div className="space-y-1.5">
                                 <Label className="text-xs text-muted-foreground uppercase tracking-wider">Company Size</Label>
                                 <Input
@@ -349,7 +349,7 @@ export default function ProspectPreferencesForm({ onSubmit, isLoading }: Prospec
             </div>
 
             {/* Toggles */}
-            <div className="grid grid-cols-2 gap-3 p-3 rounded-lg bg-muted/30 border border-border/50">
+            <div className="grid grid-cols-1 gap-3 p-3 sm:grid-cols-2 rounded-lg bg-muted/30 border border-border/50">
                 <div className="flex items-center justify-between gap-2">
                     <Label htmlFor="playwright-toggle" className="flex items-center gap-1.5 text-sm cursor-pointer">
                         <Globe className="h-3.5 w-3.5 text-primary" />
@@ -374,7 +374,8 @@ export default function ProspectPreferencesForm({ onSubmit, isLoading }: Prospec
                 </div>
             </div>
 
-            <DialogFooter>
+            {/* Sticky so the submit button stays reachable when autofill expands the form */}
+            <DialogFooter className="sticky -bottom-6 -mx-6 -mb-6 border-t bg-background px-6 py-4">
                 <Button type="submit" disabled={isLoading || jobTitles.length === 0 || !companyDescription || !goal}>
                     {isLoading ? (
                         <>

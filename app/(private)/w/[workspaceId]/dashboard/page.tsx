@@ -1,10 +1,28 @@
 import { DashboardTabs } from '@/components/dashboard/DashboardTabs';
+import { apiFetchServer } from '@/lib/api-server';
+import type { BusinessOutcomesResponse, ProspectV2 } from '@/lib/api-types';
 import { getRedis } from '@/utils/redis';
 import { createClient } from '@/utils/supabase/server';
 import { Zap } from 'lucide-react';
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  params,
+}: {
+  params: Promise<{ workspaceId: string }>;
+}) {
+  const { workspaceId } = await params;
   const supabase = await createClient();
+
+  // Headline stats come from the workspace-scoped v2 API; the legacy tables
+  // below only feed the follow-ups / meetings tabs.
+  const [v2Prospects, outcomes] = await Promise.all([
+    apiFetchServer<{ prospects: ProspectV2[] }>('/v2/prospects', { workspaceId }).catch(
+      () => null
+    ),
+    apiFetchServer<BusinessOutcomesResponse>('/evals/outcomes', { workspaceId }).catch(
+      () => null
+    ),
+  ]);
 
   // Fetch emails with status for analytics
   const { data: emailsData } = await supabase.from('emails').select('*');
@@ -64,9 +82,12 @@ export default async function DashboardPage() {
 
     // Statistics
     stats: {
-      totalProspects: prospectsData?.length || 0,
-      emailsSent: sentEmails.length,
-      responseRate: responseRate,
+      totalProspects: v2Prospects?.prospects.length ?? prospectsData?.length ?? 0,
+      emailsSent: outcomes?.outcomes.emails_sent ?? sentEmails.length,
+      responseRate:
+        outcomes?.outcomes.reply_rate != null
+          ? Math.round(outcomes.outcomes.reply_rate * 100)
+          : responseRate,
       avgResponseTime: avgResponseHours,
       completedMeetings: meetingsData?.filter((m) => m.status === 'completed')?.length || 0,
     },

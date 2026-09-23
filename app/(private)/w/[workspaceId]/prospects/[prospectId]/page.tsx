@@ -12,7 +12,7 @@ import {
   useOverrideProspectStatus,
   useProspectDossier,
 } from '@/lib/hooks/use-prospects-v2';
-import type { ProspectV2Status } from '@/lib/api-types';
+import type { ProspectSignal, ProspectV2Status } from '@/lib/api-types';
 import {
   StatusChip,
   PROSPECT_STATUS_LABELS,
@@ -51,6 +51,14 @@ const OVERRIDE_STATUSES: ProspectV2Status[] = [
   'insufficient_evidence',
   'disqualified',
 ];
+
+function signalText(value: ProspectSignal['value']): string {
+  if (value == null) return '';
+  if (typeof value === 'string') return value;
+  const inner = value.value ?? value.type;
+  if (inner == null) return '';
+  return Array.isArray(inner) ? inner.join(', ') : String(inner);
+}
 
 export default function ProspectDossierPage() {
   const { prospectId } = useParams<{ prospectId: string }>();
@@ -233,8 +241,10 @@ export default function ProspectDossierPage() {
                     <span className="font-medium">
                       {signal.signal_type.replace(/[_-]/g, ' ')}
                     </span>
-                    {signal.value && (
-                      <span className="text-muted-foreground">{signal.value}</span>
+                    {signalText(signal.value) && (
+                      <span className="text-muted-foreground">
+                        {signalText(signal.value)}
+                      </span>
                     )}
                     <ConfidenceBadge confidence={signal.confidence} />
                     <span className="text-muted-foreground">

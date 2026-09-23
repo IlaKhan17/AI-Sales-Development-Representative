@@ -49,14 +49,14 @@ export default async function ProfileSection() {
             <Avatar className="h-14 w-14 border-2 border-border/50">
               <AvatarImage src={user?.user_metadata?.avatar_url || "/placeholder.svg?height=56&width=56"} />
               <AvatarFallback className="bg-primary/10 text-primary font-bold text-lg">
-                {user?.user_metadata.full_name?.charAt(0).toUpperCase() || user?.user_metadata.email.charAt(0).toUpperCase()}
+                {(user?.user_metadata?.full_name || user?.email || '?').charAt(0).toUpperCase()}
               </AvatarFallback>
             </Avatar>
             <div className="flex-1 min-w-0 space-y-3">
               <div>
                 <div className="flex items-center gap-2">
-                  <h3 className="text-lg font-semibold truncate">{user.user_metadata.full_name}</h3>
-                  {user.user_metadata.email_verified && (
+                  <h3 className="text-lg font-semibold truncate">{user.user_metadata?.full_name || user.email}</h3>
+                  {user.user_metadata?.email_verified && (
                     <Badge variant="outline" className="text-xs bg-green-500/10 text-green-600 border-green-500/20">
                       <Shield className="h-3 w-3 mr-1" />
                       Verified
