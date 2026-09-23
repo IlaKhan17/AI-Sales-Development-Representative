@@ -166,7 +166,11 @@ class EmailDiscoveryService:
           4. Try Hunter.io fallback if key available
           5. Return sorted results with confidence scores
         """
-        domain = company_domain.lower().strip().lstrip("www.").lstrip("http://").lstrip("https://")
+        # removeprefix, not lstrip: lstrip strips a character set, which turned
+        # "stripe.com" into "ripe.com".
+        domain = company_domain.lower().strip()
+        domain = domain.removeprefix("https://").removeprefix("http://").removeprefix("www.")
+        domain = domain.split("/")[0]
 
         # Step 1 – Generate patterns
         candidates = self.generate_email_patterns(first_name, last_name, domain)

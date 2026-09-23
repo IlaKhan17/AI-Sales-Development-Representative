@@ -53,7 +53,10 @@ async def list_icp_profiles(ctx: WorkspaceContext = Depends(get_workspace_contex
     db = get_supabase_admin()
     profiles = (
         db.table("icp_profiles")
-        .select("*, icp_versions(id, version, status, definition, weights, notes, created_at)")
+        .select(
+            "*, icp_versions!icp_versions_icp_profile_id_fkey"
+            "(id, version, status, definition, weights, notes, created_at)"
+        )
         .eq("workspace_id", ctx.workspace_id)
         .order("created_at", desc=True)
         .execute()

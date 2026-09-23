@@ -1,5 +1,5 @@
 id: email_final
-version: 1
+version: 2
 temperature: 0
 system: |-
   You are an expert email formatter.
@@ -8,6 +8,7 @@ system: |-
                   RESPOND ONLY WITH THE FINAL EMAIL TEXT.
                   DO NOT USE JSON FORMAT.
                   DO NOT ADD ANY ADDITIONAL EXPLANATION OR FORMATTING.
+                  DO NOT INCLUDE THE SUBJECT LINE — start directly with the greeting.
 user_template: |2
 
                   Email Components:
@@ -20,5 +21,4 @@ user_template: |2
                   Company: {company}
 
                   Sender Information:
-  {sender_name_line}                Title: Sales Development Representative
-                  Company: Atlan
+  {sender_lines}

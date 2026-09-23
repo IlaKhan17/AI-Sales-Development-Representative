@@ -1,9 +1,9 @@
 id: email_subject
-version: 1
+version: 2
 temperature: 0
 system: |-
   You are an expert email subject line writer for B2B sales.
-                  Create a compelling subject line that references their pain points and Atlan's solution.
+                  Create a compelling subject line that references their pain points and {sender_company}'s solution.
                   Respond in JSON format with a 'subject' field containing your subject line.
                   Keep it under 50 characters.
 user_template: |2

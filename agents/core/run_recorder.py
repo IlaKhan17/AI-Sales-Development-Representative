@@ -51,7 +51,8 @@ def _submit(table: str, op: str, payload: dict, match: dict | None = None) -> No
     try:
         loop = asyncio.get_running_loop()
         task = loop.create_task(asyncio.to_thread(_write, table, op, payload, match))
-        task.add_done_callback(lambda t: t.exception())  # swallow, _write already logs
+        # swallow, _write already logs; t.exception() itself raises on a cancelled task
+        task.add_done_callback(lambda t: t.cancelled() or t.exception())
     except RuntimeError:
         # No running event loop (e.g. sync context) — write inline, still guarded
         _write(table, op, payload, match)

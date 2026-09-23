@@ -167,6 +167,8 @@ async def create_draft(
     draft = await EmailService().process(
         prospect_dict,
         sender_name=(profile or {}).get("sender_name"),
+        sender_title=(profile or {}).get("sender_title"),
+        sender_company=(profile or {}).get("name"),
         user_id=actor,
         workspace_id=ctx.workspace_id,
     )
