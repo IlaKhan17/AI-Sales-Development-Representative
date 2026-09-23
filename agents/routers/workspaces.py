@@ -225,7 +225,7 @@ async def list_members(workspace_id: str, user: AuthUser = Depends(get_current_u
     db = get_supabase_admin()
     members = (
         db.table("memberships")
-        .select("user_id, role, created_at, users(id, email, full_name)")
+        .select("user_id, role, created_at, users!memberships_user_id_fkey(id, email, full_name)")
         .eq("workspace_id", workspace_id)
         .execute()
     ).data
