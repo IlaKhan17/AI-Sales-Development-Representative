@@ -19,16 +19,10 @@ import {
 } from '@/components/evidence/status-chip';
 import { ConfidenceBadge } from '@/components/evidence/confidence-badge';
 import { ClaimCard } from '@/components/evidence/claim-card';
-import { ScoreBreakdown } from '@/components/evidence/score-breakdown';
+import { Citations, ScoreBreakdown } from '@/components/evidence/score-breakdown';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   Select,
   SelectContent,
@@ -44,6 +38,27 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+
+// Which ledger line each extracted signal supports.
+const SIGNAL_TO_COMPONENT: Record<string, string> = {
+  role_match: 'role',
+  industry: 'industry',
+  company_size: 'company_size',
+  geography: 'geography',
+  technology: 'technology',
+  buying_signal: 'buying_signals',
+  pain_signal: 'buying_signals',
+};
+
+const SIGNAL_LABELS: Record<string, string> = {
+  role_match: 'Role',
+  industry: 'Industry',
+  company_size: 'Company size',
+  geography: 'Location',
+  technology: 'Uses',
+  buying_signal: 'Buying signal',
+  pain_signal: 'Pain point',
+};
 
 const OVERRIDE_STATUSES: ProspectV2Status[] = [
   'qualified',
@@ -77,7 +92,7 @@ export default function ProspectDossierPage() {
     try {
       await override.mutateAsync({ prospectId, status: pendingStatus });
       toast.success(
-        `Status set to "${PROSPECT_STATUS_LABELS[pendingStatus]}"`
+        `Status changed to ${PROSPECT_STATUS_LABELS[pendingStatus]}`
       );
       setPendingStatus(null);
     } catch (err) {
@@ -87,7 +102,7 @@ export default function ProspectDossierPage() {
 
   if (isLoading) {
     return (
-      <div className="max-w-3xl space-y-6">
+      <div className="space-y-6">
         <Skeleton className="h-10 w-72" />
         <Skeleton className="h-56 w-full rounded-xl" />
         <Skeleton className="h-40 w-full rounded-xl" />
@@ -115,25 +130,44 @@ export default function ProspectDossierPage() {
 
   const { prospect, evidence, signals, score } = data;
   const company = data.company ?? prospect.company;
-  const evidenceById = new Map(evidence.map((e) => [e.id, e]));
+  // Sources are numbered in the order the API returns them; citations in the
+  // ledger and signal list point at these numbers.
+  const sourceNumber = new Map(evidence.map((e, i) => [e.id, i + 1]));
+  const citeFor = (ids: string[] | undefined) =>
+    Array.from(
+      new Set((ids ?? []).map((id) => sourceNumber.get(id)).filter((n): n is number => !!n))
+    ).sort((a, b) => a - b);
+
+  const componentCitations: Record<string, number[]> = {};
+  for (const signal of signals) {
+    const component = SIGNAL_TO_COMPONENT[signal.signal_type];
+    if (!component) continue;
+    componentCitations[component] = Array.from(
+      new Set([...(componentCitations[component] ?? []), ...citeFor(signal.evidence_ids)])
+    ).sort((a, b) => a - b);
+  }
+
+  const backHref = prospect.campaign_id
+    ? `/w/${workspace.id}/campaigns/${prospect.campaign_id}`
+    : `/w/${workspace.id}/prospects`;
 
   return (
-    <div className="max-w-3xl space-y-6">
-      <div>
-        <Button variant="ghost" size="sm" asChild className="-ml-2 mb-2">
-          <Link href={`/w/${workspace.id}/campaigns`}>
-            <ArrowLeft className="mr-1.5 h-4 w-4" /> Campaigns
-          </Link>
-        </Button>
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-semibold tracking-tight">
-                {prospect.full_name}
-              </h1>
+    <div className="space-y-8">
+      <header className="space-y-4">
+        <Link
+          href={backHref}
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          {prospect.campaign_id ? 'Back to campaign' : 'All prospects'}
+        </Link>
+        <div className="flex flex-wrap items-end justify-between gap-4 border-b border-border pb-6">
+          <div className="min-w-0 space-y-2">
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="text-3xl font-bold tracking-tight md:text-4xl">{prospect.full_name}</h1>
               <StatusChip status={prospect.status} />
             </div>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="text-base text-muted-foreground">
               {[prospect.role_title, company?.name].filter(Boolean).join(' at ') ||
                 'Role and company unknown'}
               {company?.domain && (
@@ -141,122 +175,112 @@ export default function ProspectDossierPage() {
                   href={`https://${company.domain}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="ml-2 text-primary hover:underline"
+                  className="ml-2 text-foreground underline decoration-border underline-offset-2"
                 >
                   {company.domain}
                 </a>
               )}
             </p>
-            {prospect.email && (
-              <p className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
-                <Mail className="h-3.5 w-3.5" />
-                {prospect.email}
-                {prospect.email_confidence && (
-                  <span className="text-xs capitalize">
-                    ({prospect.email_confidence})
-                  </span>
-                )}
-              </p>
-            )}
+            <p className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Mail className="h-3.5 w-3.5" />
+              {prospect.email ? (
+                <>
+                  <span className="text-foreground">{prospect.email}</span>
+                  {prospect.email_confidence && (
+                    <span className="capitalize">({prospect.email_confidence} address)</span>
+                  )}
+                </>
+              ) : (
+                'No email found yet, so this prospect cannot be enrolled.'
+              )}
+            </p>
           </div>
           <RoleGate action="create_campaign">
-            <div className="w-52">
-              <Select
-                value=""
-                onValueChange={(v) => setPendingStatus(v as ProspectV2Status)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Override status…" />
+            <div className="w-full sm:w-56">
+              <Select value="" onValueChange={(v) => setPendingStatus(v as ProspectV2Status)}>
+                <SelectTrigger aria-label="Change status">
+                  <SelectValue placeholder="Change status" />
                 </SelectTrigger>
                 <SelectContent>
-                  {OVERRIDE_STATUSES.filter((s) => s !== prospect.status).map(
-                    (s) => (
-                      <SelectItem key={s} value={s}>
-                        {PROSPECT_STATUS_LABELS[s]}
-                      </SelectItem>
-                    )
-                  )}
+                  {OVERRIDE_STATUSES.filter((s) => s !== prospect.status).map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {PROSPECT_STATUS_LABELS[s]}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
           </RoleGate>
         </div>
         {score?.disqualification_reason && (
-          <div className="mt-3 flex items-start gap-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
+          <div className="flex items-start gap-2 rounded-md border border-hold/30 bg-hold/10 p-3 text-sm text-hold">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
             <span>
-              <span className="font-medium">Disqualified:</span>{' '}
-              {score.disqualification_reason}
+              <span className="font-semibold">Disqualified.</span> {score.disqualification_reason}
             </span>
           </div>
         )}
-      </div>
+      </header>
 
-      <ScoreBreakdown score={score} />
+      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)]">
+        <div className="space-y-8">
+          <ScoreBreakdown score={score} citations={componentCitations} />
 
-      <div className="space-y-3">
-        <div>
-          <h2 className="text-lg font-semibold">Evidence</h2>
-          <p className="text-sm text-muted-foreground">
-            Sourced claims backing this prospect&apos;s score.
-          </p>
-        </div>
-        {evidence.length === 0 ? (
-          <Card className="border-dashed">
-            <CardContent className="py-8 text-center text-sm text-muted-foreground">
-              No evidence collected yet.
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-3">
-            {evidence.map((claim) => (
-              <ClaimCard key={claim.id} claim={claim} />
-            ))}
-          </div>
-        )}
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Signals</CardTitle>
-          <CardDescription>
-            Detected buying and fit signals with linked evidence.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {signals.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No signals detected.</p>
-          ) : (
-            <div className="flex flex-wrap gap-2">
-              {signals.map((signal, i) => {
-                const linked = (signal.evidence_ids ?? []).filter((id) =>
-                  evidenceById.has(id)
-                ).length;
-                const evidenceCount = signal.evidence_ids?.length ?? linked;
-                return (
-                  <span
+          <section aria-labelledby="signals-heading">
+            <h2 id="signals-heading" className="text-base font-semibold">
+              What Davis extracted
+            </h2>
+            <p className="mb-3 text-sm text-muted-foreground">
+              Facts pulled from the sources. Anything without a source is dropped before scoring.
+            </p>
+            {signals.length === 0 ? (
+              <p className="rounded-md border border-dashed border-border px-4 py-6 text-sm text-muted-foreground">
+                No facts could be extracted from the sources found so far.
+              </p>
+            ) : (
+              <dl className="divide-y divide-border rounded-md border border-border bg-card">
+                {signals.map((signal, i) => (
+                  <div
                     key={`${signal.signal_type}-${i}`}
-                    className="inline-flex items-center gap-2 rounded-full border bg-muted/40 px-3 py-1.5 text-xs"
+                    className="grid grid-cols-[8.5rem_1fr_auto] items-baseline gap-4 px-4 py-2.5 text-sm"
                   >
-                    <span className="font-medium">
-                      {signal.signal_type.replace(/[_-]/g, ' ')}
-                    </span>
-                    {signalText(signal.value) && (
-                      <span className="text-muted-foreground">
-                        {signalText(signal.value)}
-                      </span>
-                    )}
-                    <ConfidenceBadge confidence={signal.confidence} />
-                    <span className="text-muted-foreground">
-                      {evidenceCount} evidence
-                    </span>
-                  </span>
-                );
-              })}
+                    <dt className="text-muted-foreground">
+                      {SIGNAL_LABELS[signal.signal_type] ?? signal.signal_type.replace(/[_-]/g, ' ')}
+                    </dt>
+                    <dd className="min-w-0">
+                      {signalText(signal.value) || 'n/a'}
+                      <Citations numbers={citeFor(signal.evidence_ids)} />
+                    </dd>
+                    <dd>
+                      <ConfidenceBadge confidence={signal.confidence} />
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            )}
+          </section>
+        </div>
+
+        <aside aria-labelledby="sources-heading" className="lg:sticky lg:top-8 lg:self-start">
+          <h2 id="sources-heading" className="text-base font-semibold">
+            Sources
+          </h2>
+          <p className="mb-3 text-sm text-muted-foreground">
+            Where each fact came from, quoted as found.
+          </p>
+          {evidence.length === 0 ? (
+            <p className="rounded-md border border-dashed border-border px-4 py-6 text-sm text-muted-foreground">
+              No sources yet. Without sources a prospect stays at insufficient evidence.
+            </p>
+          ) : (
+            <div className="space-y-3 lg:max-h-[calc(100vh-10rem)] lg:overflow-y-auto lg:pr-1">
+              {evidence.map((claim, i) => (
+                <ClaimCard key={claim.id} claim={claim} number={i + 1} />
+              ))}
             </div>
           )}
-        </CardContent>
-      </Card>
+        </aside>
+      </div>
 
       <Dialog
         open={pendingStatus !== null}
@@ -264,7 +288,7 @@ export default function ProspectDossierPage() {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Override prospect status</DialogTitle>
+            <DialogTitle>Change status</DialogTitle>
             <DialogDescription>
               Set {prospect.full_name}&apos;s status from{' '}
               <span className="font-medium">
@@ -274,7 +298,7 @@ export default function ProspectDossierPage() {
               <span className="font-medium">
                 {pendingStatus ? PROSPECT_STATUS_LABELS[pendingStatus] : ''}
               </span>
-              ? This manual override is recorded.
+              . The change is recorded as a manual override.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -285,7 +309,7 @@ export default function ProspectDossierPage() {
               {override.isPending && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
-              Confirm
+              Change status
             </Button>
           </DialogFooter>
         </DialogContent>

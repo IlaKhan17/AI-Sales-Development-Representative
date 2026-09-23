@@ -438,6 +438,7 @@ export interface CampaignDetailResponse {
 }
 
 export interface ProspectV2 {
+  campaign_id?: string | null;
   id: string;
   full_name: string;
   role_title?: string | null;

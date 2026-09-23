@@ -21,8 +21,6 @@ import {
 } from '@/lib/hooks/use-approvals';
 import type { Approval } from '@/lib/api-types';
 import { cn } from '@/lib/utils';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -127,146 +125,160 @@ export default function ApprovalsPage() {
   }
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Approvals</h1>
-        <p className="text-sm text-muted-foreground">
-          Review outbound drafts before they are sent. Refreshes every 10 seconds.
-        </p>
-      </div>
+    <div className="space-y-6">
+      <header className="flex flex-wrap items-end justify-between gap-3 border-b border-border pb-5">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Approvals</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Nothing is sent until you approve it. The queue refreshes every 10 seconds.
+          </p>
+        </div>
+        {approvals.length > 0 && (
+          <p className="text-sm text-muted-foreground">
+            <span className="font-semibold text-foreground">{approvals.length}</span>{' '}
+            {approvals.length === 1 ? 'draft' : 'drafts'} waiting
+          </p>
+        )}
+      </header>
 
       {approvals.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center gap-2 py-14 text-center">
-            <Inbox className="h-8 w-8 text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">
-              No drafts waiting for approval
-            </p>
-          </CardContent>
-        </Card>
+        <div className="rounded-md border border-dashed border-border px-6 py-14 text-center">
+          <Inbox className="mx-auto h-6 w-6 text-muted-foreground" />
+          <p className="mt-3 text-sm font-medium">No drafts waiting</p>
+          <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">
+            Enroll qualified prospects in a campaign sequence and their first emails land here.
+          </p>
+        </div>
       ) : (
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,20rem)_1fr]">
-          {/* List */}
-          <div className="space-y-2">
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,18rem)_1fr]">
+          <ul className="space-y-1" aria-label="Drafts waiting for approval">
             {approvals.map((approval) => (
-              <ApprovalListItem
-                key={approval.id}
-                approval={approval}
-                active={selected?.id === approval.id}
-                onSelect={() => setSelectedId(approval.id)}
-              />
+              <li key={approval.id}>
+                <ApprovalListItem
+                  approval={approval}
+                  active={selected?.id === approval.id}
+                  onSelect={() => setSelectedId(approval.id)}
+                />
+              </li>
             ))}
-          </div>
+          </ul>
 
-          {/* Detail */}
           {selected && (
-            <Card>
-              <CardContent className="space-y-4 pt-6">
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div>
-                    <p className="text-sm font-medium">
-                      {selected.message?.prospect?.full_name ?? 'Unknown prospect'}
-                      {selected.message?.prospect?.company_name && (
-                        <span className="text-muted-foreground">
-                          {' '}
-                          · {selected.message.prospect.company_name}
-                        </span>
-                      )}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      To: {selected.payload.to}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="secondary">
-                      Step {selected.message?.step_number ?? 1}
-                    </Badge>
-                    {!editing && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setEditing(true)}
-                      >
-                        <Pencil className="mr-1.5 h-3.5 w-3.5" /> Edit
-                      </Button>
+            <section aria-label="Selected draft" className="space-y-4">
+              {selected.payload.checks_failed && selected.payload.checks_failed.length > 0 ? (
+                <div className="rounded-md border border-hold/30 bg-hold/10 p-3 text-sm text-hold">
+                  <p className="flex items-center gap-2 font-semibold">
+                    <AlertTriangle className="h-4 w-4" />
+                    This draft failed pre-send checks
+                  </p>
+                  <ul className="mt-1.5 list-disc space-y-0.5 pl-6">
+                    {selected.payload.checks_failed.map((c, i) => (
+                      <li key={i}>{c.detail}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : (
+                <p className="flex items-center gap-2 text-sm text-approve">
+                  <Check className="h-4 w-4" />
+                  Passed pre-send checks: length, no placeholders, no disallowed claims, valid links and address.
+                </p>
+              )}
+
+              <article className="rounded-md border border-border bg-card">
+                <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border px-6 py-4">
+                  <dl className="grid grid-cols-[3.5rem_1fr] gap-y-1 text-sm">
+                    <dt className="text-muted-foreground">To</dt>
+                    <dd>
+                      <span className="font-medium">
+                        {selected.message?.prospect?.full_name ?? 'Unknown prospect'}
+                      </span>{' '}
+                      <span className="text-muted-foreground">&lt;{selected.payload.to}&gt;</span>
+                    </dd>
+                    {selected.message?.prospect?.company_name && (
+                      <>
+                        <dt className="text-muted-foreground">At</dt>
+                        <dd>{selected.message.prospect.company_name}</dd>
+                      </>
                     )}
-                  </div>
-                </div>
-
-                {selected.payload.checks_failed &&
-                  selected.payload.checks_failed.length > 0 && (
-                    <Alert variant="destructive">
-                      <AlertTriangle className="h-4 w-4" />
-                      <AlertTitle>Pre-send checks failed</AlertTitle>
-                      <AlertDescription>
-                        <ul className="mt-1 list-disc space-y-1 pl-4">
-                          {selected.payload.checks_failed.map((c, i) => (
-                            <li key={i}>
-                              <span className="font-mono text-xs">{c.code}</span>
-                              {' — '}
-                              {c.detail}
-                            </li>
-                          ))}
-                        </ul>
-                      </AlertDescription>
-                    </Alert>
+                    <dt className="text-muted-foreground">Step</dt>
+                    <dd>{selected.message?.step_number ?? 1} of the sequence</dd>
+                  </dl>
+                  {!editing && (
+                    <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
+                      <Pencil className="mr-1.5 h-3.5 w-3.5" /> Edit draft
+                    </Button>
                   )}
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="approval-subject">Subject</Label>
-                  <Input
-                    id="approval-subject"
-                    value={subject}
-                    readOnly={!editing}
-                    onChange={(e) => setSubject(e.target.value)}
-                    className={cn(!editing && 'bg-muted/50')}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="approval-body">Body</Label>
-                  <Textarea
-                    id="approval-body"
-                    rows={12}
-                    value={body}
-                    readOnly={!editing}
-                    onChange={(e) => setBody(e.target.value)}
-                    className={cn(!editing && 'bg-muted/50')}
-                  />
                 </div>
 
-                <RoleGate
-                  action="approve_drafts"
-                  fallback={
-                    <p className="text-xs text-muted-foreground">
-                      You do not have permission to approve drafts.
-                    </p>
-                  }
-                >
-                  <div className="flex gap-2">
-                    <Button
-                      className="bg-emerald-600 text-white hover:bg-emerald-700"
-                      disabled={decide.isPending}
-                      onClick={() => handleDecide('approve')}
-                    >
-                      {decide.isPending ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      ) : (
-                        <Check className="mr-2 h-4 w-4" />
-                      )}
-                      Approve
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="text-destructive hover:text-destructive"
-                      disabled={decide.isPending}
-                      onClick={() => handleDecide('reject')}
-                    >
-                      <X className="mr-2 h-4 w-4" /> Reject
-                    </Button>
-                  </div>
-                </RoleGate>
-              </CardContent>
-            </Card>
+                <div className="space-y-4 px-6 py-5">
+                  {editing ? (
+                    <>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="approval-subject">Subject</Label>
+                        <Input
+                          id="approval-subject"
+                          value={subject}
+                          onChange={(e) => setSubject(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="approval-body">Body</Label>
+                        <Textarea
+                          id="approval-body"
+                          rows={14}
+                          value={body}
+                          onChange={(e) => setBody(e.target.value)}
+                          className="font-serif text-base leading-relaxed"
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <h2 className="text-lg font-semibold leading-snug">{subject}</h2>
+                      <div className="max-w-[62ch] whitespace-pre-wrap font-serif text-[1.0625rem] leading-[1.7] text-foreground">
+                        {body}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </article>
+
+              <RoleGate
+                action="approve_drafts"
+                fallback={
+                  <p className="text-sm text-muted-foreground">
+                    Only owners, admins and reviewers can approve drafts.
+                  </p>
+                }
+              >
+                <div className="flex flex-wrap items-center gap-3">
+                  <Button
+                    className="bg-approve text-approve-foreground hover:bg-approve/90"
+                    disabled={decide.isPending}
+                    onClick={() => handleDecide('approve')}
+                  >
+                    {decide.isPending ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Check className="mr-2 h-4 w-4" />
+                    )}
+                    {editing ? 'Save and send' : 'Approve and send'}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="border-hold/40 text-hold hover:bg-hold/10 hover:text-hold"
+                    disabled={decide.isPending}
+                    onClick={() => handleDecide('reject')}
+                  >
+                    <X className="mr-2 h-4 w-4" /> Reject draft
+                  </Button>
+                  <p className="basis-full text-xs text-muted-foreground">
+                    Sending goes through your connected Gmail. Suppression, the daily cap and
+                    duplicate sends are checked again at the moment you approve.
+                  </p>
+                </div>
+              </RoleGate>
+            </section>
           )}
         </div>
       )}
@@ -284,45 +296,34 @@ function ApprovalListItem({
   onSelect: () => void;
 }) {
   const prospect = approval.message?.prospect;
+  const failed = !!approval.payload.checks_failed?.length;
   return (
     <button
       type="button"
       onClick={onSelect}
+      aria-current={active ? 'true' : undefined}
       className={cn(
-        'w-full rounded-lg border p-3 text-left transition-colors',
+        'w-full rounded-md px-3 py-2.5 text-left transition-colors',
         active
-          ? 'border-primary bg-primary/5'
-          : 'border-border hover:bg-muted/50'
+          ? 'bg-card shadow-[inset_2px_0_0_hsl(var(--primary))] ring-1 ring-border'
+          : 'hover:bg-card/70'
       )}
     >
       <div className="flex items-center justify-between gap-2">
-        <p className="truncate text-sm font-medium">
-          {prospect?.full_name ?? 'Unknown prospect'}
-          {prospect?.company_name && (
-            <span className="font-normal text-muted-foreground">
-              {' '}
-              · {prospect.company_name}
-            </span>
-          )}
-        </p>
-        {approval.payload.checks_failed &&
-          approval.payload.checks_failed.length > 0 && (
-            <AlertTriangle className="h-4 w-4 shrink-0 text-amber-500" />
-          )}
-      </div>
-      <p className="mt-0.5 truncate text-xs text-muted-foreground">
-        {approval.payload.subject}
-      </p>
-      <div className="mt-1.5 flex items-center gap-2">
-        <Badge variant="secondary" className="text-[10px]">
-          Step {approval.message?.step_number ?? 1}
-        </Badge>
-        <span className="text-xs text-muted-foreground">
-          {formatDistanceToNow(new Date(approval.created_at), {
-            addSuffix: true,
-          })}
+        <p className="truncate text-sm font-semibold">{prospect?.full_name ?? 'Unknown prospect'}</p>
+        <span className="shrink-0 text-xs text-muted-foreground">
+          {formatDistanceToNow(new Date(approval.created_at), { addSuffix: true })}
         </span>
       </div>
+      {prospect?.company_name && (
+        <p className="truncate text-xs text-muted-foreground">{prospect.company_name}</p>
+      )}
+      <p className="mt-1 truncate text-sm text-muted-foreground">{approval.payload.subject}</p>
+      {failed && (
+        <p className="mt-1 flex items-center gap-1 text-xs font-medium text-hold">
+          <AlertTriangle className="h-3.5 w-3.5" /> Failed checks
+        </p>
+      )}
     </button>
   );
 }

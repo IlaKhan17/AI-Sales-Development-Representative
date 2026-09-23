@@ -2,15 +2,11 @@ import { cn } from '@/lib/utils';
 import type { CampaignStatus } from '@/lib/api-types';
 
 const TONES: Record<CampaignStatus, string> = {
-  draft: 'bg-muted text-muted-foreground border-border',
-  running:
-    'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border-emerald-200 dark:border-emerald-900',
-  paused:
-    'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border-amber-200 dark:border-amber-900',
-  completed:
-    'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300 border-blue-200 dark:border-blue-900',
-  failed:
-    'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300 border-red-200 dark:border-red-900',
+  draft: 'bg-transparent text-muted-foreground border-dashed border-border',
+  running: 'bg-approve/10 text-approve border-approve/30',
+  paused: 'bg-caution/10 text-caution border-caution/30',
+  completed: 'bg-card text-foreground border-border',
+  failed: 'bg-hold/10 text-hold border-hold/30',
 };
 
 export function CampaignStatusBadge({
@@ -29,7 +25,7 @@ export function CampaignStatusBadge({
       )}
     >
       {status === 'running' && (
-        <span className="mr-1.5 h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
+        <span className="mr-1.5 h-1.5 w-1.5 animate-pulse rounded-full bg-approve" />
       )}
       {status}
     </span>

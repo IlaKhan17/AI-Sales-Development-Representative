@@ -1,7 +1,8 @@
 import { cn } from '@/lib/utils';
 
 /**
- * Colored confidence badge: >=0.8 green, >=0.5 amber, otherwise gray.
+ * Source confidence as a short phrase: strong (>=0.8), fair (>=0.5), weak.
+ * Only strong earns the approve color; the rest stay quiet.
  */
 export function ConfidenceBadge({
   confidence,
@@ -12,31 +13,23 @@ export function ConfidenceBadge({
 }) {
   if (confidence === null || confidence === undefined) {
     return (
-      <span
-        className={cn(
-          'inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium text-muted-foreground',
-          className
-        )}
-      >
-        n/a
-      </span>
+      <span className={cn('text-xs text-muted-foreground', className)}>Confidence unknown</span>
     );
   }
-  const tone =
+  const pct = Math.round(confidence * 100);
+  const [label, tone] =
     confidence >= 0.8
-      ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border-emerald-200 dark:border-emerald-900'
+      ? ['Strong', 'text-approve']
       : confidence >= 0.5
-        ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border-amber-200 dark:border-amber-900'
-        : 'bg-muted text-muted-foreground border-border';
+        ? ['Fair', 'text-caution']
+        : ['Weak', 'text-muted-foreground'];
   return (
     <span
-      className={cn(
-        'inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium tabular-nums',
-        tone,
-        className
-      )}
+      className={cn('inline-flex items-center gap-1 text-xs', className)}
+      title={`Confidence ${pct}%`}
     >
-      {Math.round(confidence * 100)}%
+      <span className={cn('font-semibold', tone)}>{label}</span>
+      <span className="text-muted-foreground">{pct}%</span>
     </span>
   );
 }

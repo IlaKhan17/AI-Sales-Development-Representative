@@ -1,274 +1,188 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { ArrowRight, Bot, BrainCircuit, Calendar, Mail, MessageSquare, Zap, Target, BarChart3, Clock, CheckCircle2, ChevronRight } from 'lucide-react'
 import { createClient } from "@/utils/supabase/server"
 import Header from "@/components/Header"
+import { ScoreBreakdown } from "@/components/evidence/score-breakdown"
+import { ClaimCard } from "@/components/evidence/claim-card"
+import type { EvidenceClaim, ProspectScore } from "@/lib/api-types"
+
+// Sample dossier shown in the hero. It is rendered with the same components
+// the app uses, so what visitors see is what they get.
+const SAMPLE_SCORE: ProspectScore = {
+  total: 81.7,
+  status: "qualified",
+  component_scores: {
+    role: { points: 30, max: 30, reason: "VP Finance matches a target role" },
+    industry: { points: 20, max: 20, reason: "SaaS is in the target industries" },
+    company_size: { points: 15, max: 15, reason: "250 people, inside the 50 to 1,000 range" },
+    technology: { points: 6.7, max: 10, reason: "Uses 2 of 3 target tools: NetSuite, Stripe" },
+  },
+}
+
+const SAMPLE_SOURCE: EvidenceClaim = {
+  id: "sample",
+  claim: "Team page, Ledgerly",
+  source_url: "https://ledgerly.example.com/team",
+  evidence_snippet:
+    "Maya Chen is VP Finance at Ledgerly, a 250-person Series B SaaS company. Ledgerly runs on NetSuite and Stripe, and the finance team is hiring two senior accountants.",
+  confidence: 0.8,
+}
+
+const STEPS = [
+  {
+    title: "Find",
+    body: "Davis searches the web and startup directories for people who match your ideal customer.",
+  },
+  {
+    title: "Quote",
+    body: "Every fact it keeps comes with the page it was found on, the exact words, and a confidence level.",
+  },
+  {
+    title: "Score",
+    body: "Fixed rules turn those facts into a score. The same evidence always gives the same number.",
+  },
+  {
+    title: "Draft",
+    body: "Emails are written only from claims your team has approved about your product.",
+  },
+  {
+    title: "Approve",
+    body: "You read, edit, and approve each email. Only then is it sent from your own Gmail.",
+  },
+]
+
+const WONT = [
+  {
+    rule: "Send an email you haven't approved.",
+    how: "Every draft waits in a queue. Approving is the only thing that sends.",
+  },
+  {
+    rule: "Invent a claim about your product.",
+    how: "Drafts may only use claims your team approved, and are checked for anything on your disallowed list.",
+  },
+  {
+    rule: "Score a lead it can't back up.",
+    how: "Facts without a source are dropped. A lead with too little evidence is marked as such, not guessed.",
+  },
+  {
+    rule: "Email someone who opted out.",
+    how: "Unsubscribes are suppressed automatically and checked again at the moment of sending.",
+  },
+  {
+    rule: "Go past your daily limit or send twice.",
+    how: "A send cap and duplicate check run on every approval.",
+  },
+]
 
 export default async function LandingPage() {
   const supabase = await createClient()
   const { data } = await supabase.auth.getUser()
   const user = data.user
+  const primaryHref = user ? "/workspaces" : "/login"
+  const primaryLabel = user ? "Open Davis" : "Start a workspace"
 
   return (
     <div className="flex flex-col">
       <Header user={user} />
 
-      {/* Hero Section */}
-      <section className="relative w-full pt-24 pb-20 md:pt-32 md:pb-28 overflow-hidden">
-        {/* Subtle grid background */}
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,hsl(var(--border)/0.3)_1px,transparent_1px),linear-gradient(to_bottom,hsl(var(--border)/0.3)_1px,transparent_1px)] bg-[size:4rem_4rem]" />
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background" />
-        {/* Glow */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-primary/5 rounded-full blur-3xl" />
-
-        <div className="relative max-w-4xl mx-auto px-4 md:px-6">
-          <div className="flex flex-col items-center text-center space-y-8">
-            {/* Badge */}
-            <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-1.5 text-sm text-muted-foreground">
-              <Zap className="h-3.5 w-3.5 text-primary" />
-              <span>AI-powered sales automation</span>
+      <section className="px-4 pb-20 pt-12 md:px-8 md:pt-20">
+        <div className="mx-auto grid max-w-6xl items-start gap-12 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:gap-16">
+          <div className="lg:pt-10">
+            <h1 className="text-5xl font-bold leading-[1.02] tracking-tight md:text-6xl lg:text-7xl">
+              Outbound you can check.
+            </h1>
+            <p className="mt-6 max-w-[34rem] text-lg leading-relaxed text-muted-foreground">
+              Davis finds prospects, quotes the source behind every score, and drafts emails that
+              wait for your approval. Nothing reaches a buyer until you say so.
+            </p>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Button asChild size="lg" className="h-11 px-6 text-base">
+                <Link href={primaryHref}>{primaryLabel}</Link>
+              </Button>
+              <Button asChild variant="outline" size="lg" className="h-11 px-6 text-base">
+                <Link href="#how-it-works">How a lead is scored</Link>
+              </Button>
             </div>
+          </div>
 
-            <div className="space-y-4">
-              <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl text-foreground">
-                Your sales pipeline,{" "}
-                <span className="text-primary">on autopilot</span>
-              </h1>
-              <p className="mx-auto max-w-[640px] text-lg md:text-xl text-muted-foreground leading-relaxed">
-                Davis finds your ideal prospects, researches them deeply, and sends personalized outreach that gets replies. All while you focus on closing.
+          <div aria-label="Example prospect dossier" className="space-y-3">
+            <div className="flex items-baseline justify-between gap-3 px-1">
+              <p className="text-sm">
+                <span className="font-semibold">Maya Chen</span>
+                <span className="text-muted-foreground">, VP Finance at Ledgerly</span>
               </p>
+              <span className="rounded-full border border-approve/30 bg-approve/10 px-2 py-0.5 text-xs font-medium text-approve">
+                Qualified
+              </span>
             </div>
-
-            <div className="flex flex-col sm:flex-row gap-3">
-              <Button asChild size="lg" className="h-12 px-8 text-base">
-                <Link href="/login">
-                  Start for free
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
-              <Button variant="outline" size="lg" className="h-12 px-8 text-base">
-                <Link href="#how-it-works">See how it works</Link>
-              </Button>
-            </div>
-
-            {/* Social proof */}
-            <p className="text-sm text-muted-foreground pt-4">
-              No credit card required. Set up in under 5 minutes.
-            </p>
+            <ScoreBreakdown
+              score={SAMPLE_SCORE}
+              citations={{ role: [1], industry: [1], company_size: [1], technology: [1] }}
+            />
+            <ClaimCard claim={SAMPLE_SOURCE} number={1} />
           </div>
         </div>
       </section>
 
-      {/* Metrics bar */}
-      <section className="w-full border-y border-border bg-card/50">
-        <div className="max-w-5xl mx-auto px-4 md:px-6 py-10 md:py-12">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-            <div>
-              <div className="text-3xl font-semibold text-foreground">10x</div>
-              <div className="text-sm text-muted-foreground mt-1">More prospects reached</div>
-            </div>
-            <div>
-              <div className="text-3xl font-semibold text-foreground">3x</div>
-              <div className="text-sm text-muted-foreground mt-1">Higher reply rates</div>
-            </div>
-            <div>
-              <div className="text-3xl font-semibold text-foreground">80%</div>
-              <div className="text-sm text-muted-foreground mt-1">Time saved on research</div>
-            </div>
-            <div>
-              <div className="text-3xl font-semibold text-foreground">24/7</div>
-              <div className="text-sm text-muted-foreground mt-1">Always prospecting</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Features Section */}
-      <section className="w-full py-20 md:py-28">
-        <div className="max-w-5xl mx-auto px-4 md:px-6">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl font-semibold tracking-tight md:text-4xl text-foreground">
-              Everything you need to close more deals
-            </h2>
-            <p className="mt-4 max-w-[600px] mx-auto text-muted-foreground text-lg">
-              From lead discovery to meeting follow-ups, Davis handles the entire sales development workflow.
-            </p>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {[
-              {
-                icon: Target,
-                title: "Smart Lead Discovery",
-                description: "Scrapes LinkedIn and other platforms to find prospects that match your ideal customer profile.",
-              },
-              {
-                icon: BrainCircuit,
-                title: "Deep Research",
-                description: "Analyzes posts, activity, and company data to identify pain points and buying signals.",
-              },
-              {
-                icon: BarChart3,
-                title: "Lead Scoring",
-                description: "Ranks prospects by alignment score so you focus on the highest-value opportunities first.",
-              },
-              {
-                icon: Mail,
-                title: "Personalized Outreach",
-                description: "Generates hyper-personalized emails using multi-stage AI workflows for each prospect.",
-              },
-              {
-                icon: MessageSquare,
-                title: "Reply Tracking",
-                description: "Monitors responses, analyzes sentiment, and auto-generates contextual follow-ups.",
-              },
-              {
-                icon: Calendar,
-                title: "Meeting Intelligence",
-                description: "Captures meeting notes, extracts action items, and builds a searchable knowledge base.",
-              },
-            ].map((feature, i) => (
-              <div
-                key={i}
-                className="group rounded-xl border border-border bg-card p-6 transition-all hover:border-primary/30 hover:shadow-sm"
-              >
-                <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                  <feature.icon className="h-5 w-5 text-primary" />
-                </div>
-                <h3 className="text-base font-semibold text-foreground">{feature.title}</h3>
-                <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-                  {feature.description}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* How It Works Section */}
-      <section id="how-it-works" className="w-full py-20 md:py-28 border-t border-border bg-card/30">
-        <div className="max-w-5xl mx-auto px-4 md:px-6">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl font-semibold tracking-tight md:text-4xl text-foreground">
-              How it works
-            </h2>
-            <p className="mt-4 max-w-[600px] mx-auto text-muted-foreground text-lg">
-              Three steps to transform your sales pipeline
-            </p>
-          </div>
-
-          <div className="grid gap-12 md:gap-8 md:grid-cols-3">
-            {[
-              {
-                step: "01",
-                title: "Define your ICP",
-                description: "Tell Davis who you're looking for — industry, role, company size, and the problems you solve.",
-                icon: Target,
-              },
-              {
-                step: "02",
-                title: "AI does the work",
-                description: "Davis finds matching prospects, researches them, and drafts personalized outreach emails.",
-                icon: Bot,
-              },
-              {
-                step: "03",
-                title: "You close deals",
-                description: "Review AI-generated emails, track replies, and focus your time on conversations that convert.",
-                icon: Zap,
-              },
-            ].map((item, i) => (
-              <div key={i} className="relative flex flex-col">
-                <div className="text-5xl font-bold text-border mb-4">{item.step}</div>
-                <h3 className="text-xl font-semibold text-foreground">{item.title}</h3>
-                <p className="mt-2 text-muted-foreground leading-relaxed">
-                  {item.description}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Use cases / Who it's for */}
-      <section className="w-full py-20 md:py-28 border-t border-border">
-        <div className="max-w-5xl mx-auto px-4 md:px-6">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl font-semibold tracking-tight md:text-4xl text-foreground">
-              Built for modern sales teams
-            </h2>
-            <p className="mt-4 max-w-[600px] mx-auto text-muted-foreground text-lg">
-              Whether you are a founder doing your own outbound or managing an SDR team, Davis scales with you.
-            </p>
-          </div>
-
-          <div className="grid gap-6 md:grid-cols-2">
-            <div className="rounded-xl border border-border bg-card p-8">
-              <h3 className="text-lg font-semibold text-foreground mb-4">For founders & solo sellers</h3>
-              <ul className="space-y-3">
-                {[
-                  "Stop spending hours on LinkedIn research",
-                  "Send outreach that sounds like you, not a template",
-                  "Never miss a follow-up again",
-                  "Focus on product while Davis fills the pipeline",
-                ].map((item, i) => (
-                  <li key={i} className="flex items-start gap-3 text-sm text-muted-foreground">
-                    <CheckCircle2 className="h-4 w-4 text-primary mt-0.5 shrink-0" />
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div className="rounded-xl border border-border bg-card p-8">
-              <h3 className="text-lg font-semibold text-foreground mb-4">For sales teams</h3>
-              <ul className="space-y-3">
-                {[
-                  "Scale outbound without scaling headcount",
-                  "Consistent, high-quality messaging across the team",
-                  "AI meeting notes keep everyone aligned",
-                  "Built-in knowledge base for faster ramp-up",
-                ].map((item, i) => (
-                  <li key={i} className="flex items-start gap-3 text-sm text-muted-foreground">
-                    <CheckCircle2 className="h-4 w-4 text-primary mt-0.5 shrink-0" />
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="w-full py-20 md:py-28 border-t border-border">
-        <div className="max-w-3xl mx-auto px-4 md:px-6 text-center">
-          <h2 className="text-3xl font-semibold tracking-tight md:text-4xl text-foreground">
-            Start closing more deals today
+      <section id="how-it-works" className="scroll-mt-16 border-t border-border bg-card px-4 py-20 md:px-8">
+        <div className="mx-auto max-w-6xl">
+          <h2 className="max-w-2xl text-3xl font-bold tracking-tight md:text-4xl">
+            From search to sent, with a person at the end
           </h2>
-          <p className="mt-4 max-w-[500px] mx-auto text-muted-foreground text-lg">
-            Set up in minutes. No credit card required.
+          <p className="mt-3 max-w-2xl text-muted-foreground">
+            Davis does the searching, reading and drafting. The decision to send stays with you.
           </p>
-          <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
-            <Button asChild size="lg" className="h-12 px-8 text-base">
-              <Link href="/login">
-                Get started
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
-          </div>
+          <ol className="mt-12 grid gap-px overflow-hidden rounded-md border border-border bg-border sm:grid-cols-2 lg:grid-cols-5">
+            {STEPS.map((step, i) => (
+              <li key={step.title} className="bg-card p-5">
+                <span className="text-sm font-semibold text-muted-foreground">{i + 1}</span>
+                <h3 className="mt-6 text-lg font-semibold">{step.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{step.body}</p>
+              </li>
+            ))}
+          </ol>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="w-full border-t border-border py-8">
-        <div className="max-w-5xl mx-auto px-4 md:px-6 flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <Zap className="h-4 w-4 text-primary" />
-            <span className="font-semibold text-sm">Davis</span>
+      <section className="border-t border-border px-4 py-20 md:px-8">
+        <div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[minmax(0,4fr)_minmax(0,7fr)] lg:gap-16">
+          <div>
+            <h2 className="text-3xl font-bold tracking-tight md:text-4xl">What Davis will not do</h2>
+            <p className="mt-3 text-muted-foreground">
+              These are enforced in code, not left to the model&apos;s judgement.
+            </p>
           </div>
-          <p className="text-sm text-muted-foreground">
+          <ul className="divide-y divide-border border-y border-border">
+            {WONT.map((item) => (
+              <li key={item.rule} className="grid gap-1 py-5 sm:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] sm:gap-8">
+                <p className="font-semibold">{item.rule}</p>
+                <p className="text-sm leading-relaxed text-muted-foreground">{item.how}</p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      <section className="border-t border-border bg-primary px-4 py-16 text-primary-foreground md:px-8">
+        <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-6 md:flex-row md:items-center">
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight md:text-3xl">Run your first campaign</h2>
+            <p className="mt-2 max-w-xl text-primary-foreground/75">
+              Describe your product, define who you sell to, connect Gmail, and start a campaign.
+            </p>
+          </div>
+          <Button asChild size="lg" variant="secondary" className="h-11 px-6 text-base">
+            <Link href={primaryHref}>{primaryLabel}</Link>
+          </Button>
+        </div>
+      </section>
+
+      <footer className="border-t border-border px-4 py-8 md:px-8">
+        <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-2 text-sm md:flex-row md:items-center">
+          <span className="font-bold">Davis</span>
+          <p className="text-muted-foreground">
             Built by{" "}
-            <a href="mailto:ila.rehman.khan@gmail.com" className="text-foreground hover:text-primary transition-colors">
+            <a href="mailto:ila.rehman.khan@gmail.com" className="text-foreground underline underline-offset-2">
               Ila Rehman
             </a>
           </p>
