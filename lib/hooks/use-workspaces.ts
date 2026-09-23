@@ -45,10 +45,15 @@ export function useCreateWorkspace() {
 export function useUpdateWorkspace(workspaceId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (body: Partial<ProductProfile & { name: string }>) =>
+    // The API takes the workspace name at the top level and the profile
+    // fields nested under product_profile; flat profile fields are ignored.
+    mutationFn: ({ name, ...profile }: Partial<ProductProfile & { name: string }>) =>
       apiFetch<WorkspaceDetailResponse>(`/workspaces/${workspaceId}`, {
         method: 'PATCH',
-        body,
+        body: {
+          ...(name !== undefined ? { name } : {}),
+          ...(Object.keys(profile).length > 0 ? { product_profile: profile } : {}),
+        },
         workspaceId,
       }),
     onSuccess: () => {
