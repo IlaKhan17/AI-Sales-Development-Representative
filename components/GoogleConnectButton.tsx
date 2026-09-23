@@ -13,6 +13,12 @@ import type { GoogleAuthUrlResponse, GoogleStatus } from "@/lib/api-types";
 import { Mail, CheckCircle2, LogOut, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
+const GOOGLE_ERROR_MESSAGES: Record<string, string> = {
+    access_denied: "Google access was not granted.",
+    session_expired: "The connection attempt expired. Please try again.",
+    connection_failed: "Google rejected the connection. Please try again.",
+};
+
 export default function GoogleConnectButton() {
     const [status, setStatus] = useState<GoogleStatus>({ connected: false });
     const [loading, setLoading] = useState(true);
@@ -27,8 +33,9 @@ export default function GoogleConnectButton() {
             // Clean up URL
             window.history.replaceState({}, "", window.location.pathname);
         }
-        if (params.get("google_error")) {
-            toast.error(`Google connection failed: ${params.get("google_error")}`);
+        const googleError = params.get("google_error");
+        if (googleError) {
+            toast.error(GOOGLE_ERROR_MESSAGES[googleError] ?? `Google connection failed: ${googleError}`);
             window.history.replaceState({}, "", window.location.pathname);
         }
     }, []);
@@ -47,7 +54,11 @@ export default function GoogleConnectButton() {
     const handleConnect = async () => {
         try {
             setLoading(true);
-            const { auth_url } = await apiFetch<GoogleAuthUrlResponse>("/auth/google");
+            // Come back to this page after consent so the result toast is shown here.
+            const returnTo = encodeURIComponent(window.location.pathname);
+            const { auth_url } = await apiFetch<GoogleAuthUrlResponse>(
+                `/auth/google?return_to=${returnTo}`
+            );
             window.location.href = auth_url;
         } catch (error) {
             console.error("Error connecting Google:", error);

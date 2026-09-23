@@ -1,6 +1,8 @@
 import base64
+import json
 import logging
 import os
+import secrets
 from datetime import datetime, timezone
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -14,6 +16,14 @@ from googleapiclient.discovery import build
 from supabase import Client, create_client
 
 load_dotenv()
+
+# include_granted_scopes can return scopes beyond SCOPES (e.g. openid/email
+# granted at sign-in); without this oauthlib raises "Scope has changed".
+os.environ.setdefault("OAUTHLIB_RELAX_TOKEN_SCOPE", "1")
+
+# One-time OAuth state: state nonce -> {user_id, code_verifier, return_to}.
+_OAUTH_STATE_PREFIX = "google_oauth_state:"
+_OAUTH_STATE_TTL_SECONDS = 600
 
 logger = logging.getLogger(__name__)
 
@@ -48,9 +58,9 @@ class GoogleService:
 
     # ── OAuth Flow ──────────────────────────────────────────────
 
-    def get_auth_url(self, state: str = "") -> str:
-        """Generate the Google OAuth consent URL."""
-        flow = Flow.from_client_config(
+    @staticmethod
+    def _flow(code_verifier: Optional[str] = None) -> Flow:
+        return Flow.from_client_config(
             {
                 "web": {
                     "client_id": GOOGLE_CLIENT_ID,
@@ -62,33 +72,59 @@ class GoogleService:
             },
             scopes=SCOPES,
             redirect_uri=GOOGLE_REDIRECT_URI,
+            code_verifier=code_verifier,
         )
+
+    def get_auth_url(self, user_id: str, return_to: str = "") -> str:
+        """Generate the Google OAuth consent URL.
+
+        The flow uses PKCE, so the code_verifier must survive until the callback
+        (which builds a fresh Flow). It is stored in Redis under a random
+        one-time ``state`` nonce together with the user id, which also means the
+        callback never trusts a user id supplied in the URL.
+        """
+        from core.redis_client import get_redis
+
+        flow = self._flow()
+        nonce = secrets.token_urlsafe(32)
         auth_url, _ = flow.authorization_url(
             access_type="offline",
             include_granted_scopes="true",
             prompt="consent",
-            state=state,
+            state=nonce,
+        )
+        get_redis().setex(
+            _OAUTH_STATE_PREFIX + nonce,
+            _OAUTH_STATE_TTL_SECONDS,
+            json.dumps(
+                {"user_id": user_id, "code_verifier": flow.code_verifier, "return_to": return_to}
+            ),
         )
         return auth_url
 
-    async def exchange_code(self, code: str, user_id: str) -> Dict[str, Any]:
+    @staticmethod
+    def consume_oauth_state(state: str) -> Optional[Dict[str, Any]]:
+        """Pop the one-time state saved by get_auth_url; None if unknown/expired."""
+        from core.redis_client import get_redis
+
+        if not state:
+            return None
+        key = _OAUTH_STATE_PREFIX + state
+        redis = get_redis()
+        raw = redis.get(key)
+        if not raw:
+            return None
+        redis.delete(key)
+        return json.loads(raw)
+
+    async def exchange_code(
+        self, code: str, user_id: str, code_verifier: Optional[str] = None
+    ) -> Dict[str, Any]:
         """Exchange authorization code for tokens and store them."""
         print(f"\n[GoogleService] exchange_code called for user: {user_id}")
 
         try:
-            flow = Flow.from_client_config(
-                {
-                    "web": {
-                        "client_id": GOOGLE_CLIENT_ID,
-                        "client_secret": GOOGLE_CLIENT_SECRET,
-                        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-                        "token_uri": "https://oauth2.googleapis.com/token",
-                        "redirect_uris": [GOOGLE_REDIRECT_URI],
-                    }
-                },
-                scopes=SCOPES,
-                redirect_uri=GOOGLE_REDIRECT_URI,
-            )
+            flow = self._flow(code_verifier=code_verifier)
             print("[GoogleService] Flow created successfully")
 
             flow.fetch_token(code=code)
