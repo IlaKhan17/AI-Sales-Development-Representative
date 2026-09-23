@@ -13,113 +13,93 @@ import {
 } from '@/components/campaigns/campaign-funnel';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { PageHeader } from '@/components/page-header';
 
 export default function CampaignsPage() {
   const { workspace } = useWorkspace();
   const { data, isLoading, isError, error, refetch } = useCampaigns(workspace.id);
   const campaigns = data?.campaigns ?? [];
 
+  const newButton = (
+    <RoleGate action="create_campaign">
+      <Button asChild>
+        <Link href={`/w/${workspace.id}/campaigns/new`}>
+          <Plus className="mr-2 h-4 w-4" /> New campaign
+        </Link>
+      </Button>
+    </RoleGate>
+  );
+
   return (
-    <div className="max-w-4xl space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Campaigns</h1>
-          <p className="text-sm text-muted-foreground">
-            Evidence-grounded prospecting runs against a versioned ICP.
-          </p>
-        </div>
-        <RoleGate action="create_campaign">
-          <Button asChild>
-            <Link href={`/w/${workspace.id}/campaigns/new`}>
-              <Plus className="mr-2 h-4 w-4" /> New Campaign
-            </Link>
-          </Button>
-        </RoleGate>
-      </div>
+    <div className="space-y-8">
+      <PageHeader
+        title="Campaigns"
+        description="Each campaign searches for prospects that fit one version of your ideal customer, then scores them."
+        actions={campaigns.length > 0 ? newButton : undefined}
+      />
 
       {isLoading ? (
-        <div className="space-y-4">
+        <div className="space-y-2">
           {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} className="h-36 w-full rounded-xl" />
+            <Skeleton key={i} className="h-20 w-full" />
           ))}
         </div>
       ) : isError ? (
-        <Card className="border-destructive/30">
-          <CardContent className="py-10 text-center">
-            <p className="text-sm text-destructive">
-              {error instanceof Error ? error.message : 'Failed to load campaigns'}
-            </p>
-            <Button variant="outline" size="sm" className="mt-4" onClick={() => refetch()}>
-              <RefreshCw className="mr-2 h-3.5 w-3.5" /> Retry
-            </Button>
-          </CardContent>
-        </Card>
+        <div className="rounded-md border border-hold/30 bg-hold/10 p-6 text-center">
+          <p className="text-sm text-hold">
+            {error instanceof Error ? error.message : "Couldn't load campaigns."}
+          </p>
+          <Button variant="outline" size="sm" className="mt-4" onClick={() => refetch()}>
+            <RefreshCw className="mr-2 h-3.5 w-3.5" /> Retry
+          </Button>
+        </div>
       ) : campaigns.length === 0 ? (
-        <Card className="border-dashed">
-          <CardContent className="py-14 text-center">
-            <Megaphone className="mx-auto h-10 w-10 text-muted-foreground/40" />
-            <h2 className="mt-4 text-lg font-medium">No campaigns yet</h2>
-            <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">
-              Create your first campaign to discover, research, and score
-              prospects against an active ICP version.
-            </p>
-            <RoleGate action="create_campaign">
-              <Button asChild className="mt-5">
-                <Link href={`/w/${workspace.id}/campaigns/new`}>
-                  <Plus className="mr-2 h-4 w-4" /> Create Campaign
-                </Link>
-              </Button>
-            </RoleGate>
-          </CardContent>
-        </Card>
+        <div className="rounded-md border border-dashed border-border px-6 py-14 text-center">
+          <Megaphone className="mx-auto h-6 w-6 text-muted-foreground" />
+          <h2 className="mt-3 text-base font-semibold">No campaigns yet</h2>
+          <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">
+            A campaign finds and scores prospects against your ideal customer. You need an active
+            version of it first.
+          </p>
+          <div className="mt-5 flex justify-center">{newButton}</div>
+        </div>
       ) : (
-        <div className="space-y-4">
+        <ul className="divide-y divide-border rounded-md border border-border bg-card">
           {campaigns.map((c) => {
             const total = campaignTotal(c.counts);
             return (
-              <Link
-                key={c.id}
-                href={`/w/${workspace.id}/campaigns/${c.id}`}
-                className="block"
-              >
-                <Card className="transition-colors hover:border-primary/40">
-                  <CardHeader className="flex-row items-start justify-between space-y-0 pb-3">
-                    <div className="space-y-1">
-                      <CardTitle className="text-base">{c.name}</CardTitle>
-                      <CardDescription>
-                        {c.objective || 'No objective set'}
-                        {c.region ? ` · ${c.region}` : ''}
-                      </CardDescription>
-                    </div>
-                    <CampaignStatusBadge status={c.status} />
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    {c.counts && <CampaignFunnel counts={c.counts} showLegend={false} />}
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                      <span>
-                        <span className="font-medium text-emerald-600 dark:text-emerald-400 tabular-nums">
-                          {c.counts?.qualified ?? 0}
-                        </span>{' '}
-                        qualified of{' '}
-                        <span className="font-medium text-foreground tabular-nums">{total}</span>{' '}
-                        prospects
+              <li key={c.id}>
+                <Link
+                  href={`/w/${workspace.id}/campaigns/${c.id}`}
+                  className="grid gap-3 px-5 py-4 transition-colors hover:bg-background/60 md:grid-cols-[minmax(0,1fr)_14rem_7rem] md:items-center md:gap-8"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold">{c.name}</p>
+                    <p className="truncate text-sm text-muted-foreground">
+                      {c.objective || 'No objective set'}
+                    </p>
+                    {c.region && (
+                      <p className="text-xs text-muted-foreground">Region: {c.region}</p>
+                    )}
+                  </div>
+                  <div className="space-y-1.5">
+                    <p className="text-sm">
+                      <span className="font-semibold">{c.counts?.qualified ?? 0}</span>
+                      <span className="text-muted-foreground">
+                        {' '}
+                        qualified of {total} found, target {c.target_prospect_count}
                       </span>
-                      <span>Target: {c.target_prospect_count}</span>
-                      <span>{c.allowed_sources.length} sources</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
+                    </p>
+                    {c.counts && <CampaignFunnel counts={c.counts} showLegend={false} />}
+                  </div>
+                  <div className="md:text-right">
+                    <CampaignStatusBadge status={c.status} />
+                  </div>
+                </Link>
+              </li>
             );
           })}
-        </div>
+        </ul>
       )}
     </div>
   );

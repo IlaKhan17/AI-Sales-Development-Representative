@@ -25,7 +25,6 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -84,13 +83,13 @@ export default function SuppressionPage() {
   };
 
   return (
-    <div className="max-w-2xl space-y-6">
+    <div className="max-w-4xl space-y-8">
       <SettingsNav />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Suppression list</h1>
+          <h2 className="text-lg font-semibold">Do not email</h2>
           <p className="text-sm text-muted-foreground">
-            Addresses that will never be emailed by this workspace.
+            Addresses this workspace will never send to. Checked again at the moment of every send.
           </p>
         </div>
         <Dialog open={addOpen} onOpenChange={setAddOpen}>
@@ -138,9 +137,9 @@ export default function SuppressionPage() {
           <Skeleton className="h-10 w-full" />
         </div>
       ) : isError ? (
-        <Card className="border-destructive/30">
-          <CardContent className="py-10 text-center">
-            <p className="text-sm text-destructive">
+        <div className="rounded-md border border-hold/30 bg-hold/10 py-10 text-center">
+          <div>
+            <p className="text-sm text-hold">
               {error instanceof Error
                 ? error.message
                 : 'Failed to load suppression list'}
@@ -153,18 +152,19 @@ export default function SuppressionPage() {
             >
               <RefreshCw className="mr-2 h-3.5 w-3.5" /> Retry
             </Button>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       ) : !data || data.entries.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center gap-2 py-14 text-center">
-            <ShieldBan className="h-8 w-8 text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">
-              No suppressed addresses.
-            </p>
-          </CardContent>
-        </Card>
+        <div className="rounded-md border border-dashed border-border px-6 py-14 text-center">
+          <ShieldBan className="mx-auto h-6 w-6 text-muted-foreground" />
+          <p className="mt-3 text-sm font-medium">Nobody on the list yet</p>
+          <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">
+            Anyone who replies asking to unsubscribe is added automatically. Add an address by hand
+            to make sure it is never emailed.
+          </p>
+        </div>
       ) : (
+        <div className="overflow-x-auto rounded-md border border-border bg-card">
         <Table>
           <TableHeader>
             <TableRow>
@@ -223,6 +223,7 @@ export default function SuppressionPage() {
             ))}
           </TableBody>
         </Table>
+        </div>
       )}
     </div>
   );

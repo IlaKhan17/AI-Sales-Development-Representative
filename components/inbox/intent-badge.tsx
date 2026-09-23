@@ -1,5 +1,4 @@
 import type { ReplyIntent } from '@/lib/api-types';
-import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
 export const INTENT_LABELS: Record<ReplyIntent, string> = {
@@ -17,26 +16,27 @@ export const INTENT_LABELS: Record<ReplyIntent, string> = {
   ambiguous: 'Ambiguous',
 };
 
+// Grouped by what the reply asks of you: good news, a conversation to have,
+// a no, or nothing at all.
+const POSITIVE = 'bg-approve/10 text-approve border-approve/30';
+const CONVERSATION = 'bg-card text-foreground border-border';
+const PUSHBACK = 'bg-caution/10 text-caution border-caution/30';
+const NEGATIVE = 'bg-hold/10 text-hold border-hold/30';
+const NOISE = 'bg-transparent text-muted-foreground border-border';
+
 const INTENT_CLASSES: Record<ReplyIntent, string> = {
-  interested:
-    'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300',
-  meeting_requested:
-    'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300',
-  needs_information:
-    'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300',
-  referral: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300',
-  objection:
-    'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300',
-  not_now: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300',
-  not_interested:
-    'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300',
-  unsubscribe: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300',
-  wrong_person: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300',
-  out_of_office:
-    'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
-  automatic: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
-  ambiguous:
-    'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300',
+  interested: POSITIVE,
+  meeting_requested: POSITIVE,
+  needs_information: CONVERSATION,
+  referral: CONVERSATION,
+  objection: PUSHBACK,
+  not_now: PUSHBACK,
+  ambiguous: `${PUSHBACK} border-dashed`,
+  not_interested: NEGATIVE,
+  unsubscribe: NEGATIVE,
+  wrong_person: NEGATIVE,
+  out_of_office: NOISE,
+  automatic: NOISE,
 };
 
 export function IntentBadge({
@@ -49,14 +49,17 @@ export function IntentBadge({
   className?: string;
 }) {
   return (
-    <Badge
-      variant="secondary"
-      className={cn(INTENT_CLASSES[intent] ?? INTENT_CLASSES.ambiguous, className)}
+    <span
+      className={cn(
+        'inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium',
+        INTENT_CLASSES[intent] ?? INTENT_CLASSES.ambiguous,
+        className
+      )}
     >
       {INTENT_LABELS[intent] ?? intent}
       {typeof confidence === 'number' && (
-        <span className="ml-1 opacity-75">{Math.round(confidence * 100)}%</span>
+        <span className="ml-1 font-normal opacity-75">{Math.round(confidence * 100)}%</span>
       )}
-    </Badge>
+    </span>
   );
 }

@@ -78,7 +78,7 @@ export default function AuthPage() {
               <Input type="email" name="email" placeholder="Email" required />
               <Input type="password" name="password" placeholder="Password" required />
               {error && <p className="text-destructive text-sm">{error}</p>}
-              {success && <p className="text-green-500 text-sm">{success}</p>}
+              {success && <p className="text-approve text-sm">{success}</p>}
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading ? (
                   <>
@@ -97,7 +97,7 @@ export default function AuthPage() {
               <Input type="email" name="email" placeholder="Email" required />
               <Input type="password" name="password" placeholder="Password" required />
               {error && <p className="text-destructive text-sm">{error}</p>}
-              {success && <p className="text-green-500 text-sm">{success}</p>}
+              {success && <p className="text-approve text-sm">{success}</p>}
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading ? (
                   <>

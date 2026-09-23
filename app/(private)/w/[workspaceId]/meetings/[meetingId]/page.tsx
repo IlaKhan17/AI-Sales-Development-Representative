@@ -3,25 +3,12 @@
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { format } from 'date-fns';
-import {
-  AlertTriangle,
-  ArrowLeft,
-  Building2,
-  CircleDollarSign,
-  ClipboardList,
-  FileText,
-  HelpCircle,
-  Hourglass,
-  ListChecks,
-  Scale,
-  Sparkles,
-} from 'lucide-react';
+import { ArrowLeft, Sparkles } from 'lucide-react';
 
 import { useWorkspace } from '@/components/providers/workspace-provider';
-import {
-  useActionItemStatus,
-  useMeetingDetail,
-} from '@/lib/hooks/use-meetings';
+import { useActionItemStatus, useMeetingDetail } from '@/lib/hooks/use-meetings';
+import { PageHeader } from '@/components/page-header';
+import { cn } from '@/lib/utils';
 
 import {
   Accordion,
@@ -29,47 +16,35 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
 
-function InsightList({
-  title,
-  icon: Icon,
-  items,
-}: {
-  title: string;
-  icon: typeof Sparkles;
-  items: string[];
-}) {
+/** A labelled row of findings: what the buyer said about one topic. */
+function FindingRow({ label, items, empty }: { label: string; items: string[]; empty: string }) {
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2 text-sm font-medium">
-          <Icon className="h-4 w-4" /> {title}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
+    <div className="grid gap-2 px-5 py-4 sm:grid-cols-[11rem_1fr] sm:gap-6">
+      <dt className="text-sm font-medium">{label}</dt>
+      <dd>
         {items.length === 0 ? (
-          <p className="text-sm text-muted-foreground">None mentioned.</p>
+          <p className="text-sm text-muted-foreground">{empty}</p>
         ) : (
-          <ul className="list-disc space-y-1 pl-4 text-sm">
+          <ul className="list-disc space-y-1 pl-4 text-sm leading-relaxed">
             {items.map((item, i) => (
               <li key={i}>{item}</li>
             ))}
           </ul>
         )}
-      </CardContent>
-    </Card>
+      </dd>
+    </div>
   );
 }
+
+const STATUS_TONES: Record<string, string> = {
+  completed: 'border-border bg-card text-foreground',
+  failed: 'border-hold/30 bg-hold/10 text-hold',
+  active: 'border-approve/30 bg-approve/10 text-approve',
+};
 
 export default function MeetingDetailPage() {
   const { workspace } = useWorkspace();
@@ -81,8 +56,8 @@ export default function MeetingDetailPage() {
 
   if (detail.isLoading) {
     return (
-      <div className="space-y-4 p-6">
-        <Skeleton className="h-8 w-64" />
+      <div className="space-y-4">
+        <Skeleton className="h-10 w-72" />
         <Skeleton className="h-32 w-full" />
         <Skeleton className="h-48 w-full" />
       </div>
@@ -91,225 +66,200 @@ export default function MeetingDetailPage() {
 
   if (detail.isError || !detail.data) {
     return (
-      <div className="p-6 text-sm text-muted-foreground">
-        Meeting not found.
+      <div className="space-y-3">
+        <p className="text-sm text-muted-foreground">
+          This meeting doesn&apos;t exist in this workspace.
+        </p>
+        <Button variant="outline" size="sm" asChild>
+          <Link href={`/w/${workspace.id}/meetings`}>
+            <ArrowLeft className="mr-1.5 h-4 w-4" /> All meetings
+          </Link>
+        </Button>
       </div>
     );
   }
 
-  const { meeting, transcript, insights, action_items: actionItems } =
-    detail.data;
+  const { meeting, transcript, insights, action_items: actionItems } = detail.data;
+  const openCount = actionItems.filter((i) => i.status !== 'done').length;
 
   return (
-    <div className="space-y-6 p-6">
-      <div>
-        <Button variant="ghost" size="sm" asChild className="-ml-2 mb-2">
-          <Link href={`/w/${workspace.id}/meetings`}>
-            <ArrowLeft className="mr-1 h-4 w-4" /> Meetings
-          </Link>
-        </Button>
-        <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-semibold tracking-tight">
-            {meeting.title}
-          </h1>
-          <Badge
-            variant={
-              meeting.status === 'completed'
-                ? 'default'
-                : meeting.status === 'failed'
-                  ? 'destructive'
-                  : 'outline'
-            }
+    <div className="space-y-8">
+      <PageHeader
+        back={{ href: `/w/${workspace.id}/meetings`, label: 'All meetings' }}
+        title={meeting.title}
+        status={
+          <span
+            className={cn(
+              'inline-flex rounded-full border px-2 py-0.5 text-xs font-medium capitalize',
+              STATUS_TONES[meeting.status] ?? 'border-dashed border-border text-muted-foreground'
+            )}
           >
-            {meeting.status}
-          </Badge>
-        </div>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {format(new Date(meeting.created_at), 'PPp')}
-          {meeting.duration_minutes ? ` · ${meeting.duration_minutes} min` : ''}
-        </p>
-      </div>
+            {meeting.status === 'active' ? 'Recording' : meeting.status}
+          </span>
+        }
+        description={
+          <>
+            {format(new Date(meeting.created_at), 'PPp')}
+            {meeting.duration_minutes ? `, ${meeting.duration_minutes} minutes` : ''}
+          </>
+        }
+      />
 
-      {!insights ? (
-        <Card>
-          <CardContent className="py-12 text-center text-sm text-muted-foreground">
-            <Sparkles className="mx-auto mb-2 h-6 w-6" />
-            Analysis pending — insights appear after the meeting completes.
-          </CardContent>
-        </Card>
-      ) : (
-        <>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-sm font-medium">
-                <Sparkles className="h-4 w-4" /> Summary
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm leading-relaxed">
-                {insights.summary || 'No summary available.'}
-              </p>
-              {insights.timeline && (
-                <p className="mt-3 flex items-center gap-2 text-sm">
-                  <Hourglass className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">Timeline:</span>
-                  {insights.timeline}
-                </p>
-              )}
-            </CardContent>
-          </Card>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            {/* Objections — amber cards */}
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="flex items-center gap-2 text-sm font-medium">
-                  <AlertTriangle className="h-4 w-4 text-amber-500" />
-                  Objections
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {insights.objections.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    No objections raised.
-                  </p>
-                ) : (
-                  insights.objections.map((o, i) => (
-                    <div
-                      key={i}
-                      className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm dark:border-amber-900 dark:bg-amber-950/40"
-                    >
-                      <p>{o.text}</p>
-                      {o.speaker && (
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          — {o.speaker}
-                        </p>
-                      )}
-                    </div>
-                  ))
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Competitors */}
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="flex items-center gap-2 text-sm font-medium">
-                  <Building2 className="h-4 w-4" /> Competitors
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {insights.competitors.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    No competitors mentioned.
-                  </p>
-                ) : (
-                  insights.competitors.map((c, i) => (
-                    <div key={i} className="rounded-md border p-3 text-sm">
-                      <p className="font-medium">{c.name}</p>
-                      <p className="mt-0.5 text-muted-foreground">
-                        {c.context}
-                      </p>
-                    </div>
-                  ))
-                )}
-              </CardContent>
-            </Card>
-
-            <InsightList
-              title="Budget signals"
-              icon={CircleDollarSign}
-              items={insights.budget_signals}
-            />
-            <InsightList
-              title="Decision criteria"
-              icon={Scale}
-              items={insights.decision_criteria}
-            />
-            <InsightList
-              title="Requirements"
-              icon={ClipboardList}
-              items={insights.requirements}
-            />
-            <InsightList
-              title="Questions asked"
-              icon={HelpCircle}
-              items={insights.questions_asked}
-            />
-          </div>
-        </>
-      )}
-
-      {/* Action items */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2 text-sm font-medium">
-            <ListChecks className="h-4 w-4" /> Action items
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {actionItems.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              {insights
-                ? 'No action items were captured.'
-                : 'Action items appear after the meeting is analyzed.'}
-            </p>
+      <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]">
+        <div className="space-y-10">
+          {!insights ? (
+            <div className="rounded-md border border-dashed border-border px-6 py-12 text-center text-sm text-muted-foreground">
+              <Sparkles className="mx-auto mb-2 h-6 w-6" />
+              Davis analyses the call once it ends. The summary and findings appear here then.
+            </div>
           ) : (
-            actionItems.map((item) => (
-              <label
-                key={item.id}
-                className="flex cursor-pointer items-start gap-3 rounded-md border p-3"
-              >
-                <Checkbox
-                  checked={item.status === 'done'}
-                  disabled={setStatus.isPending}
-                  onCheckedChange={(v) =>
-                    setStatus.mutate({
-                      itemId: item.id,
-                      status: v === true ? 'done' : 'open',
-                    })
-                  }
-                  className="mt-0.5"
-                />
-                <span
-                  className={
-                    item.status === 'done'
-                      ? 'text-sm text-muted-foreground line-through'
-                      : 'text-sm'
-                  }
-                >
-                  {item.description}
-                  {(item.owner || item.due_hint) && (
-                    <span className="ml-2 text-xs text-muted-foreground no-underline">
-                      {item.owner ? `Owner: ${item.owner}` : ''}
-                      {item.owner && item.due_hint ? ' · ' : ''}
-                      {item.due_hint ?? ''}
-                    </span>
-                  )}
-                </span>
-              </label>
-            ))
-          )}
-        </CardContent>
-      </Card>
+            <>
+              <section aria-labelledby="summary-heading">
+                <h2 id="summary-heading" className="text-lg font-semibold">
+                  Summary
+                </h2>
+                <p className="mt-2 max-w-[68ch] text-base leading-relaxed">
+                  {insights.summary || 'No summary was produced for this call.'}
+                </p>
+                {insights.timeline && (
+                  <p className="mt-3 text-sm">
+                    <span className="font-medium">Their timeline:</span>{' '}
+                    <span className="text-muted-foreground">{insights.timeline}</span>
+                  </p>
+                )}
+              </section>
 
-      {/* Transcript */}
-      {transcript?.transcript && (
-        <Accordion type="single" collapsible>
-          <AccordionItem value="transcript" className="rounded-lg border px-4">
-            <AccordionTrigger className="text-sm font-medium">
-              <span className="flex items-center gap-2">
-                <FileText className="h-4 w-4" /> Transcript
-              </span>
-            </AccordionTrigger>
-            <AccordionContent>
-              <pre className="max-h-96 overflow-y-auto whitespace-pre-wrap rounded-md bg-muted p-4 font-mono text-xs leading-relaxed">
-                {transcript.transcript}
-              </pre>
-            </AccordionContent>
-          </AccordionItem>
-        </Accordion>
-      )}
+              <section aria-labelledby="objections-heading" className="space-y-3">
+                <h2 id="objections-heading" className="text-lg font-semibold">
+                  Objections
+                </h2>
+                {insights.objections.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No objections were raised.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {insights.objections.map((o, i) => (
+                      <figure
+                        key={i}
+                        className="rounded-md border border-border border-l-caution bg-card px-5 py-4"
+                        style={{ borderLeftWidth: 3 }}
+                      >
+                        <blockquote className="font-serif text-base leading-relaxed">
+                          {o.text}
+                        </blockquote>
+                        {o.speaker && (
+                          <figcaption className="mt-2 text-xs text-muted-foreground">
+                            Said by {o.speaker}
+                          </figcaption>
+                        )}
+                      </figure>
+                    ))}
+                  </div>
+                )}
+              </section>
+
+              <section aria-labelledby="findings-heading" className="space-y-3">
+                <h2 id="findings-heading" className="text-lg font-semibold">
+                  What else came up
+                </h2>
+                <dl className="divide-y divide-border rounded-md border border-border bg-card">
+                  <div className="grid gap-2 px-5 py-4 sm:grid-cols-[11rem_1fr] sm:gap-6">
+                    <dt className="text-sm font-medium">Competitors</dt>
+                    <dd>
+                      {insights.competitors.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">None mentioned.</p>
+                      ) : (
+                        <ul className="space-y-2 text-sm">
+                          {insights.competitors.map((c, i) => (
+                            <li key={i}>
+                              <span className="font-medium">{c.name}</span>
+                              {c.context && (
+                                <span className="text-muted-foreground">: {c.context}</span>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </dd>
+                  </div>
+                  <FindingRow label="Budget" items={insights.budget_signals} empty="Not discussed." />
+                  <FindingRow
+                    label="How they'll decide"
+                    items={insights.decision_criteria}
+                    empty="Not discussed."
+                  />
+                  <FindingRow label="Requirements" items={insights.requirements} empty="None stated." />
+                  <FindingRow
+                    label="Their questions"
+                    items={insights.questions_asked}
+                    empty="No questions asked."
+                  />
+                </dl>
+              </section>
+            </>
+          )}
+
+          {transcript?.transcript && (
+            <Accordion type="single" collapsible>
+              <AccordionItem value="transcript" className="rounded-md border border-border bg-card px-5">
+                <AccordionTrigger className="text-sm font-semibold">Full transcript</AccordionTrigger>
+                <AccordionContent>
+                  <div className="max-h-[32rem] overflow-y-auto whitespace-pre-wrap font-serif text-[0.95rem] leading-relaxed">
+                    {transcript.transcript}
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          )}
+        </div>
+
+        <aside aria-labelledby="actions-heading" className="lg:sticky lg:top-8 lg:self-start">
+          <h2 id="actions-heading" className="text-lg font-semibold">
+            Action items
+          </h2>
+          <p className="mb-3 text-sm text-muted-foreground">
+            {actionItems.length === 0
+              ? insights
+                ? 'None were captured on this call.'
+                : 'They appear after the call is analysed.'
+              : `${openCount} of ${actionItems.length} still open.`}
+          </p>
+          {actionItems.length > 0 && (
+            <ul className="divide-y divide-border rounded-md border border-border bg-card">
+              {actionItems.map((item) => (
+                <li key={item.id}>
+                  <label className="flex cursor-pointer items-start gap-3 px-4 py-3">
+                    <Checkbox
+                      checked={item.status === 'done'}
+                      disabled={setStatus.isPending}
+                      onCheckedChange={(v) =>
+                        setStatus.mutate({
+                          itemId: item.id,
+                          status: v === true ? 'done' : 'open',
+                        })
+                      }
+                      className="mt-0.5"
+                    />
+                    <span className="min-w-0 text-sm">
+                      <span
+                        className={cn(item.status === 'done' && 'text-muted-foreground line-through')}
+                      >
+                        {item.description}
+                      </span>
+                      {(item.owner || item.due_hint) && (
+                        <span className="mt-0.5 block text-xs text-muted-foreground">
+                          {[item.owner && `Owner: ${item.owner}`, item.due_hint && `Due: ${item.due_hint}`]
+                            .filter(Boolean)
+                            .join(', ')}
+                        </span>
+                      )}
+                    </span>
+                  </label>
+                </li>
+              ))}
+            </ul>
+          )}
+        </aside>
+      </div>
     </div>
   );
 }

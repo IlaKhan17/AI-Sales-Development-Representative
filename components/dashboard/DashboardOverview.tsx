@@ -1,194 +1,137 @@
 'use client';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Mail, Users, Clock, CheckCircle, CalendarClock, TrendingUp, TrendingDown, ArrowUpRight } from 'lucide-react';
-import { DashboardData } from './DashboardTabs';
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 
-export function DashboardOverview({ dashboardOverview }: { dashboardOverview: DashboardData }) {
-  const { stats } = dashboardOverview;
+import { CampaignStatusBadge } from '@/components/campaigns/campaign-status-badge';
+import { campaignTotal } from '@/components/campaigns/campaign-funnel';
+import { DashboardData } from './DashboardTabs';
 
-  const cards = [
-    {
-      title: "Total Prospects",
-      value: stats.totalProspects,
-      icon: Users,
-      change: "",
-      trend: "up",
-      description: "in this workspace",
-      color: "text-blue-500",
-      bg: "bg-blue-500/10"
-    },
-    {
-      title: "Emails Sent",
-      value: stats.emailsSent,
-      icon: Mail,
-      change: stats.emailsSent > 0 ? `+${Math.min(stats.emailsSent, 12)}` : "0",
-      trend: "up",
-      description: "this week",
-      color: "text-purple-500",
-      bg: "bg-purple-500/10"
-    },
-    {
-      title: "Response Rate",
-      value: `${stats.responseRate}%`,
-      icon: CheckCircle,
-      change: "",
-      trend: "up",
-      description: "of sent emails",
-      color: "text-green-500",
-      bg: "bg-green-500/10"
-    },
-    {
-      title: "Avg. Response Time",
-      value: `${stats.avgResponseTime}h`,
-      icon: Clock,
-      change: stats.avgResponseTime !== 24 ? "-2h" : "0",
-      trend: "down", // down is good for response time usually, but let's signal improvement green
-      description: "from last week",
-      color: "text-orange-500",
-      bg: "bg-orange-500/10"
-    },
-  ];
+function pct(value: number | null | undefined) {
+  if (value === null || value === undefined) return 'n/a';
+  return `${Math.round(value * 1000) / 10}%`;
+}
+
+/**
+ * Workspace overview, built only from live data: what is waiting on a
+ * person, how each campaign is doing, and what outreach has produced.
+ */
+export function DashboardOverview({ dashboardOverview }: { dashboardOverview: DashboardData }) {
+  const { workspaceId, campaigns, outcomes, stats } = dashboardOverview;
+  const ws = (path: string) => `/w/${workspaceId}${path}`;
+  const pending = outcomes?.approvals_pending ?? 0;
+  const qualified = campaigns.reduce((n, c) => n + (c.counts?.qualified ?? 0), 0);
+  const running = campaigns.filter((c) => c.status === 'running').length;
+
+  const todo: { text: string; href: string; action: string }[] = [];
+  if (pending > 0)
+    todo.push({
+      text: `${pending} ${pending === 1 ? 'draft is' : 'drafts are'} waiting for your approval.`,
+      href: ws('/approvals'),
+      action: 'Review drafts',
+    });
+  if (campaigns.length === 0)
+    todo.push({
+      text: 'No campaigns yet. Define your ideal customer, then start a campaign to find prospects.',
+      href: ws('/campaigns/new'),
+      action: 'New campaign',
+    });
+  else if (qualified > 0 && (outcomes?.emails_sent ?? 0) === 0 && pending === 0)
+    todo.push({
+      text: `${qualified} qualified ${qualified === 1 ? 'prospect has' : 'prospects have'} not been emailed. Enroll them in a sequence to draft the first email.`,
+      href: ws('/campaigns'),
+      action: 'Open campaigns',
+    });
 
   return (
-    <div className="space-y-8 fade-in-bottom">
-      {/* Stats Grid */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        {cards.map((card, index) => (
-          <Card key={index} className="glass-card hover:bg-card/80 transition-all duration-300 group">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">{card.title}</CardTitle>
-              <div className={cn("p-2 rounded-full transition-colors", card.bg)}>
-                <card.icon className={cn("h-4 w-4", card.color)} />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold tracking-tight">{card.value}</div>
-              <p className="flex items-center text-xs text-muted-foreground mt-1">
-                {card.change && (
-                  <span className={cn("flex items-center font-medium mr-1", card.trend === 'up' ? 'text-green-500' : 'text-green-500')}>
-                    {card.change}
-                    {card.trend === 'up' ? <TrendingUp className="ml-0.5 h-3 w-3" /> : <TrendingDown className="ml-0.5 h-3 w-3" />}
+    <div className="space-y-10">
+      <section aria-labelledby="todo-heading" className="space-y-3">
+        <h2 id="todo-heading" className="text-lg font-semibold">
+          Waiting on you
+        </h2>
+        {todo.length === 0 ? (
+          <p className="rounded-md border border-dashed border-border px-5 py-4 text-sm text-muted-foreground">
+            Nothing needs a decision right now.
+            {running > 0 && ` ${running} ${running === 1 ? 'campaign is' : 'campaigns are'} still searching.`}
+          </p>
+        ) : (
+          <ul className="divide-y divide-border rounded-md border border-border bg-card">
+            {todo.map((item) => (
+              <li
+                key={item.text}
+                className="flex flex-wrap items-center justify-between gap-3 px-5 py-4"
+              >
+                <p className="text-sm">{item.text}</p>
+                <Link
+                  href={item.href}
+                  className="text-sm font-semibold underline decoration-border underline-offset-4 hover:decoration-foreground"
+                >
+                  {item.action}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section aria-labelledby="campaigns-heading" className="space-y-3">
+        <div className="flex items-end justify-between gap-3">
+          <h2 id="campaigns-heading" className="text-lg font-semibold">
+            Campaigns
+          </h2>
+          {campaigns.length > 0 && (
+            <Link href={ws('/campaigns')} className="text-sm text-muted-foreground hover:text-foreground">
+              All campaigns
+            </Link>
+          )}
+        </div>
+        {campaigns.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Campaigns you start will be listed here.</p>
+        ) : (
+          <ul className="divide-y divide-border rounded-md border border-border bg-card">
+            {campaigns.slice(0, 5).map((c) => (
+              <li key={c.id}>
+                <Link
+                  href={ws(`/campaigns/${c.id}`)}
+                  className="grid gap-2 px-5 py-3 transition-colors hover:bg-background/60 sm:grid-cols-[minmax(0,1fr)_auto_7rem] sm:items-center sm:gap-6"
+                >
+                  <span className="truncate font-medium">{c.name}</span>
+                  <span className="text-sm text-muted-foreground">
+                    <span className="font-semibold text-foreground">{c.counts?.qualified ?? 0}</span>{' '}
+                    qualified of {campaignTotal(c.counts)}
                   </span>
-                )}
-                {card.description}
-              </p>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+                  <span className="sm:text-right">
+                    <CampaignStatusBadge status={c.status} />
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
-        {/* Recent Activity */}
-        <Card className="col-span-4 glass-card">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div className="space-y-1">
-              <CardTitle className="text-xl">Recent Activity</CardTitle>
-              <CardDescription>Latest interactions with your prospects</CardDescription>
+      <section aria-labelledby="results-heading" className="space-y-3">
+        <div className="flex items-end justify-between gap-3">
+          <h2 id="results-heading" className="text-lg font-semibold">
+            Results so far
+          </h2>
+          <Link href={ws('/evals')} className="text-sm text-muted-foreground hover:text-foreground">
+            Full report
+          </Link>
+        </div>
+        <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-md border border-border bg-border md:grid-cols-4">
+          {[
+            { label: 'Prospects found', value: String(stats.totalProspects) },
+            { label: 'Emails sent', value: String(outcomes?.emails_sent ?? stats.emailsSent) },
+            { label: 'Reply rate', value: pct(outcomes?.reply_rate) },
+            { label: 'Meetings booked', value: String(outcomes?.meeting_booked_count ?? 0) },
+          ].map((f) => (
+            <div key={f.label} className="bg-card px-5 py-4">
+              <dt className="text-sm text-muted-foreground">{f.label}</dt>
+              <dd className="mt-1 text-3xl font-bold tracking-tight">{f.value}</dd>
             </div>
-            <Button variant="outline" size="sm" asChild>
-              <Link href="/dashboard?tab=follow-ups">View All</Link>
-            </Button>
-          </CardHeader>
-          <CardContent>
-            {dashboardOverview.emailSent.length > 0 || dashboardOverview.meetings.length > 0 ? (
-              <div className="space-y-6">
-                {dashboardOverview.meetings.slice(0, 3).map((meeting, i) => (
-                  <div key={`meeting-${i}`} className="flex items-start justify-between group">
-                    <div className="flex items-start gap-4">
-                      <div className="mt-1 p-2 rounded-full bg-blue-500/10 text-blue-500">
-                        <CalendarClock className="h-4 w-4" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium leading-none">{meeting.title || 'Untitled Meeting'}</p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {meeting.date ? new Date(meeting.date).toLocaleDateString() : 'Date not set'}
-                        </p>
-                      </div>
-                    </div>
-                    <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity">
-                      <ArrowUpRight className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
-
-                {dashboardOverview.emailSent.slice(0, 3).map((email, i) => (
-                  <div key={`email-${i}`} className="flex items-start justify-between group">
-                    <div className="flex items-start gap-4">
-                      <div className="mt-1 p-2 rounded-full bg-purple-500/10 text-purple-500">
-                        <Mail className="h-4 w-4" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium leading-none">Email to <span className="text-foreground">{email.recipient}</span></p>
-                        <p className="text-xs text-muted-foreground mt-1 capitalize">Status: {email.status}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="h-[300px] flex flex-col items-center justify-center text-muted-foreground space-y-4">
-                <div className="p-4 rounded-full bg-muted">
-                  <Clock className="h-8 w-8 opacity-50" />
-                </div>
-                <p>No recent activity to display</p>
-                <Button variant="secondary">Start Prospecting</Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Top Campaigns */}
-        <Card className="col-span-3 glass-card">
-          <CardHeader>
-            <CardTitle>Campaign Performance</CardTitle>
-            <CardDescription>Highest converting outreach templates</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {dashboardOverview.emailSent.length > 0 ? (
-              <div className="space-y-6">
-                {[
-                  {
-                    name: 'Data Governance',
-                    rate: 45,
-                    color: 'bg-blue-500',
-                    replies: dashboardOverview.stats.emailsSent > 0 ? Math.round(dashboardOverview.stats.emailsSent * 0.45) : 0,
-                  },
-                  {
-                    name: 'Data Catalog',
-                    rate: 38,
-                    color: 'bg-indigo-500',
-                    replies: dashboardOverview.stats.emailsSent > 0 ? Math.round(dashboardOverview.stats.emailsSent * 0.38) : 0,
-                  },
-                  {
-                    name: 'Data Lineage',
-                    rate: 32,
-                    color: 'bg-pink-500',
-                    replies: dashboardOverview.stats.emailsSent > 0 ? Math.round(dashboardOverview.stats.emailsSent * 0.32) : 0,
-                  },
-                ].map((campaign) => (
-                  <div key={campaign.name} className="space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="font-medium">{campaign.name}</span>
-                      <span className="text-muted-foreground">{campaign.rate}%</span>
-                    </div>
-                    <div className="h-2 w-full rounded-full bg-secondary overflow-hidden">
-                      <div className={cn("h-full rounded-full transition-all duration-500 ease-out", campaign.color)} style={{ width: `${campaign.rate}%` }} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="h-[200px] flex items-center justify-center text-muted-foreground">
-                No campaigns to analyze yet
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+          ))}
+        </dl>
+      </section>
     </div>
   );
 }

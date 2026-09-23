@@ -295,7 +295,7 @@ export default function ProspectPreferencesForm({ onSubmit, isLoading }: Prospec
                 {showICP && (
                     <div className="p-3 space-y-4 bg-background/30">
                         <div className="space-y-1.5">
-                            <Label className="text-xs text-muted-foreground uppercase tracking-wider">Target Industries</Label>
+                            <Label className="text-xs text-muted-foreground">Target Industries</Label>
                             <TagInput
                                 values={targetIndustries}
                                 onAdd={(v) => setTargetIndustries([...targetIndustries, v])}
@@ -306,7 +306,7 @@ export default function ProspectPreferencesForm({ onSubmit, isLoading }: Prospec
 
                         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                             <div className="space-y-1.5">
-                                <Label className="text-xs text-muted-foreground uppercase tracking-wider">Company Size</Label>
+                                <Label className="text-xs text-muted-foreground">Company Size</Label>
                                 <Input
                                     placeholder="e.g. 50-500 employees"
                                     value={companySize}
@@ -315,7 +315,7 @@ export default function ProspectPreferencesForm({ onSubmit, isLoading }: Prospec
                                 />
                             </div>
                             <div className="space-y-1.5">
-                                <Label className="text-xs text-muted-foreground uppercase tracking-wider">Funding Stage</Label>
+                                <Label className="text-xs text-muted-foreground">Funding Stage</Label>
                                 <Input
                                     placeholder="e.g. Series A-C"
                                     value={fundingStage}
@@ -326,7 +326,7 @@ export default function ProspectPreferencesForm({ onSubmit, isLoading }: Prospec
                         </div>
 
                         <div className="space-y-1.5">
-                            <Label className="text-xs text-muted-foreground uppercase tracking-wider">Pain Points to Target</Label>
+                            <Label className="text-xs text-muted-foreground">Pain Points to Target</Label>
                             <TagInput
                                 values={painPoints}
                                 onAdd={(v) => setPainPoints([...painPoints, v])}
@@ -336,7 +336,7 @@ export default function ProspectPreferencesForm({ onSubmit, isLoading }: Prospec
                         </div>
 
                         <div className="space-y-1.5">
-                            <Label className="text-xs text-muted-foreground uppercase tracking-wider">Deal Breakers <span className="normal-case font-normal">(auto-disqualify)</span></Label>
+                            <Label className="text-xs text-muted-foreground">Deal Breakers <span className="normal-case font-normal">(auto-disqualify)</span></Label>
                             <TagInput
                                 values={dealBreakers}
                                 onAdd={(v) => setDealBreakers([...dealBreakers, v])}

@@ -14,17 +14,10 @@ import {
 } from '@/lib/hooks/use-icp';
 import type { IcpVersionStatus } from '@/lib/api-types';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { PageHeader } from '@/components/page-header';
 import {
   Dialog,
   DialogContent,
@@ -36,12 +29,16 @@ import {
 } from '@/components/ui/dialog';
 
 function StatusBadge({ status }: { status: IcpVersionStatus }) {
-  const variant =
-    status === 'active' ? 'default' : status === 'draft' ? 'secondary' : 'outline';
+  const tone =
+    status === 'active'
+      ? 'bg-approve/10 text-approve border-approve/30'
+      : status === 'draft'
+        ? 'bg-transparent text-foreground border-dashed border-border'
+        : 'bg-transparent text-muted-foreground border-border';
   return (
-    <Badge variant={variant} className="capitalize">
+    <span className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-medium capitalize ${tone}`}>
       {status}
-    </Badge>
+    </span>
   );
 }
 
@@ -70,29 +67,24 @@ export default function IcpPage() {
   };
 
   return (
-    <div className="max-w-3xl space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            Ideal Customer Profiles
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Versioned definitions used for evidence-grounded scoring.
-          </p>
-        </div>
+    <div className="space-y-8">
+      <PageHeader
+        title="Ideal customer"
+        description="Who Davis looks for and how each prospect is scored. A saved version never changes; to edit, start a new draft."
+        actions={
         <RoleGate action="edit_icp">
           <Dialog open={createOpen} onOpenChange={setCreateOpen}>
             <DialogTrigger asChild>
               <Button>
                 <Plus className="mr-2 h-4 w-4" />
-                Create profile
+                New profile
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>New ICP profile</DialogTitle>
+                <DialogTitle>New profile</DialogTitle>
                 <DialogDescription>
-                  Name the profile; you can then add versioned definitions.
+                  Name the kind of customer, for example by segment. You add the details as a version next.
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-2">
@@ -112,13 +104,14 @@ export default function IcpPage() {
                   {createProfile.isPending && (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   )}
-                  Create
+                  Create profile
                 </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
         </RoleGate>
-      </div>
+        }
+      />
 
       {isLoading ? (
         <div className="space-y-4">
@@ -127,33 +120,32 @@ export default function IcpPage() {
         </div>
       ) : isError ? (
         <div className="space-y-3">
-          <p className="text-sm text-destructive">
-            Failed to load ICP profiles: {error instanceof Error ? error.message : 'Unknown error'}
+          <p className="text-sm text-hold">
+            Couldn&apos;t load profiles: {error instanceof Error ? error.message : 'unknown error'}
           </p>
           <Button variant="outline" onClick={() => refetch()}>
             Retry
           </Button>
         </div>
       ) : !data || data.profiles.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
-            <Target className="h-8 w-8 text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">
-              No ICP profiles yet. Create one to define who Davis should target.
-            </p>
-          </CardContent>
-        </Card>
+        <div className="rounded-md border border-dashed border-border px-6 py-14 text-center">
+          <Target className="mx-auto h-6 w-6 text-muted-foreground" />
+          <p className="mt-3 text-sm font-medium">No profiles yet</p>
+          <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">
+            A profile describes one kind of customer. Campaigns score every prospect against it.
+          </p>
+        </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-6">
           {data.profiles.map((profile) => (
-            <Card key={profile.id}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0">
+            <section key={profile.id} className="rounded-md border border-border bg-card">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4">
                 <div>
-                  <CardTitle className="text-base">{profile.name}</CardTitle>
-                  <CardDescription>
+                  <h2 className="text-base font-semibold">{profile.name}</h2>
+                  <p className="text-sm text-muted-foreground">
                     {profile.versions.length} version
                     {profile.versions.length === 1 ? '' : 's'}
-                  </CardDescription>
+                  </p>
                 </div>
                 <RoleGate action="edit_icp">
                   <Button variant="outline" size="sm" asChild>
@@ -165,11 +157,11 @@ export default function IcpPage() {
                     </Link>
                   </Button>
                 </RoleGate>
-              </CardHeader>
-              <CardContent className="space-y-2">
+              </div>
+              <div className="divide-y divide-border">
                 {profile.versions.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    No versions yet.
+                  <p className="px-5 py-4 text-sm text-muted-foreground">
+                    No versions yet. Add one to describe this customer.
                   </p>
                 ) : (
                   [...profile.versions]
@@ -177,16 +169,16 @@ export default function IcpPage() {
                     .map((v) => (
                       <div
                         key={v.id}
-                        className="flex items-center justify-between rounded-md border px-3 py-2"
+                        className="flex flex-wrap items-center justify-between gap-2 px-5 py-3"
                       >
                         <div className="flex items-center gap-3">
-                          <span className="text-sm font-medium">
-                            v{v.version}
+                          <span className="text-sm font-semibold">
+                            Version {v.version}
                           </span>
                           <StatusBadge status={v.status} />
                           {v.created_at && (
                             <span className="text-xs text-muted-foreground">
-                              {new Date(v.created_at).toLocaleDateString()}
+                              Saved {new Date(v.created_at).toLocaleDateString()}
                             </span>
                           )}
                         </div>
@@ -210,7 +202,7 @@ export default function IcpPage() {
                                       profileId: profile.id,
                                       versionId: v.id,
                                     });
-                                    toast.success(`v${v.version} activated`);
+                                    toast.success(`Version ${v.version} activated`);
                                   } catch (err) {
                                     toast.error(
                                       err instanceof Error
@@ -228,8 +220,8 @@ export default function IcpPage() {
                       </div>
                     ))
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </section>
           ))}
         </div>
       )}

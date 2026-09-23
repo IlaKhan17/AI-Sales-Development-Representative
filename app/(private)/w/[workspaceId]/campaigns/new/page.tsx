@@ -7,7 +7,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
-import { ArrowLeft, Loader2, ShieldCheck } from 'lucide-react';
+import { Loader2, ShieldCheck } from 'lucide-react';
 
 import { useWorkspace } from '@/components/providers/workspace-provider';
 import { useIcpProfiles } from '@/lib/hooks/use-icp';
@@ -18,13 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { FormSection, PageHeader } from '@/components/page-header';
 import {
   Form,
   FormControl,
@@ -146,26 +140,19 @@ export default function NewCampaignPage() {
   };
 
   return (
-    <div className="max-w-2xl space-y-6">
-      <div>
-        <Button variant="ghost" size="sm" asChild className="-ml-2 mb-2">
-          <Link href={`/w/${workspace.id}/campaigns`}>
-            <ArrowLeft className="mr-1.5 h-4 w-4" /> Campaigns
-          </Link>
-        </Button>
-        <h1 className="text-2xl font-semibold tracking-tight">New Campaign</h1>
-        <p className="text-sm text-muted-foreground">
-          Configure discovery scope, sources, and outreach limits.
-        </p>
-      </div>
+    <div className="max-w-5xl space-y-8">
+      <PageHeader
+        back={{ href: `/w/${workspace.id}/campaigns`, label: 'All campaigns' }}
+        title="New campaign"
+        description="Say who to look for and how much outreach to allow. Nothing is sent until you approve it."
+      />
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Basics</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-5">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+          <FormSection
+            title="Who to look for"
+            description="The ideal customer version sets the scoring rules for every prospect found."
+          >
               <FormField
                 control={form.control}
                 name="name"
@@ -193,7 +180,7 @@ export default function NewCampaignPage() {
                       />
                     </FormControl>
                     <FormDescription>
-                      Optional. Guides the research and messaging agents.
+                      Optional. Used when researching prospects and writing emails.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -204,7 +191,7 @@ export default function NewCampaignPage() {
                 name="icp_version_id"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>ICP version</FormLabel>
+                    <FormLabel>Ideal customer version</FormLabel>
                     {icpQuery.isLoading ? (
                       <Skeleton className="h-10 w-full" />
                     ) : icpQuery.isError ? (
@@ -223,12 +210,12 @@ export default function NewCampaignPage() {
                       </div>
                     ) : versionGroups.length === 0 ? (
                       <p className="text-sm text-muted-foreground">
-                        No draft or active ICP versions available.{' '}
+                        There is no ideal customer version yet.{' '}
                         <Link
                           href={`/w/${workspace.id}/icp`}
-                          className="text-primary underline"
+                          className="font-medium text-foreground underline underline-offset-2"
                         >
-                          Create one first
+                          Define one first
                         </Link>
                         .
                       </p>
@@ -239,7 +226,7 @@ export default function NewCampaignPage() {
                       >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select an ICP version" />
+                            <SelectValue placeholder="Choose a version" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -248,8 +235,7 @@ export default function NewCampaignPage() {
                               <SelectLabel>{profile.name}</SelectLabel>
                               {versions.map((v) => (
                                 <SelectItem key={v.id} value={v.id}>
-                                  v{v.version} ·{' '}
-                                  {v.status === 'active' ? 'Active' : 'Draft'}
+                                  Version {v.version} ({v.status === 'active' ? 'active' : 'draft'})
                                 </SelectItem>
                               ))}
                             </SelectGroup>
@@ -275,17 +261,12 @@ export default function NewCampaignPage() {
                   </FormItem>
                 )}
               />
-            </CardContent>
-          </Card>
+          </FormSection>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Discovery</CardTitle>
-              <CardDescription>
-                How many prospects to find and where to look.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-5">
+          <FormSection
+            title="Where to search"
+            description="How many prospects to find. Leave every source unticked to search them all."
+          >
               <FormField
                 control={form.control}
                 name="target_prospect_count"
@@ -313,7 +294,7 @@ export default function NewCampaignPage() {
                           control={form.control}
                           name="allowed_sources"
                           render={({ field }) => (
-                            <FormItem className="flex flex-row items-center space-x-2 space-y-0 rounded-md border p-3">
+                            <FormItem className="flex flex-row items-center space-x-2 space-y-0 rounded-md border border-border bg-background p-3">
                               <FormControl>
                                 <Checkbox
                                   checked={field.value?.includes(source.value)}
@@ -345,14 +326,12 @@ export default function NewCampaignPage() {
                   </FormItem>
                 )}
               />
-            </CardContent>
-          </Card>
+          </FormSection>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Outreach</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-5">
+          <FormSection
+            title="Outreach limits"
+            description="How many emails each prospect can receive and how many go out per day."
+          >
               <div className="grid gap-5 sm:grid-cols-2">
                 <FormField
                   control={form.control}
@@ -383,15 +362,11 @@ export default function NewCampaignPage() {
                   )}
                 />
               </div>
-              <div className="flex items-center gap-2 rounded-md border bg-muted/40 p-3 text-sm">
-                <ShieldCheck className="h-4 w-4 shrink-0 text-emerald-500" />
-                <span>
-                  <span className="font-medium">Human approval required.</span>{' '}
-                  All drafts must be manually approved before sending.
-                </span>
-              </div>
-            </CardContent>
-          </Card>
+              <p className="flex items-start gap-2 text-sm text-muted-foreground">
+                <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-approve" />
+                Every draft waits for a person to approve it before it is sent.
+              </p>
+          </FormSection>
 
           <div className="flex justify-end gap-3">
             <Button variant="outline" type="button" asChild>
@@ -401,7 +376,7 @@ export default function NewCampaignPage() {
               {createCampaign.isPending && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
-              Create Campaign
+              Create campaign
             </Button>
           </div>
         </form>

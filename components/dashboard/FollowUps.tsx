@@ -65,16 +65,16 @@ export function FollowUps({ initialEmails }: FollowUpsProps) {
   }
 
   const getSentimentColor = (sentiment: string) => {
-    if (sentiment.includes("Positive")) return "bg-green-500/10 text-green-500 border-green-500/20"
-    if (sentiment.includes("Negative")) return "bg-red-500/10 text-red-500 border-red-500/20"
-    return "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
+    if (sentiment.includes("Positive")) return "bg-approve/10 text-approve border-approve/30"
+    if (sentiment.includes("Negative")) return "bg-hold/10 text-hold border-hold/30"
+    return "bg-caution/10 text-caution border-caution/30"
   }
 
   return (
     <div className="space-y-6 fade-in-bottom">
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+          <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center">
             <Mail className="h-5 w-5 text-primary" />
           </div>
           <div>
@@ -90,7 +90,7 @@ export function FollowUps({ initialEmails }: FollowUpsProps) {
 
       <div className="grid gap-4">
         {analyzedEmails.map((item, index) => (
-          <Card key={index} className="glass-card hover:bg-card/80 transition-all overflow-hidden border-l-4 border-l-primary/50">
+          <Card key={index} className="glass-card hover:bg-card transition-all overflow-hidden border-l-4 border-l-primary/50">
             <CardContent className="p-6">
               <div className="flex flex-col md:flex-row items-start justify-between gap-6">
                 <div className="grid gap-3 flex-1">
@@ -99,7 +99,7 @@ export function FollowUps({ initialEmails }: FollowUpsProps) {
                       <User className="h-3 w-3" />
                       {item.email.from}
                     </div>
-                    <Badge variant="outline" className="text-xs uppercase tracking-wider">{item.analysis.intent}</Badge>
+                    <Badge variant="outline" className="text-xs">{item.analysis.intent}</Badge>
                     <div className={cn("text-xs font-medium px-2 py-0.5 rounded-full border", getSentimentColor(item.analysis.sentiment))}>
                       {item.analysis.sentiment}
                     </div>
@@ -114,7 +114,7 @@ export function FollowUps({ initialEmails }: FollowUpsProps) {
                 {item.suggested_followup && (
                   <div className="flex-shrink-0">
                     <Button
-                      className="w-full md:w-auto shadow-sm"
+                      className="w-full md:w-auto"
                       onClick={() => {
                         setSelectedEmail(item)
                         setEditedFollowup(item.suggested_followup?.body || "")
@@ -132,7 +132,7 @@ export function FollowUps({ initialEmails }: FollowUpsProps) {
         ))}
 
         {analyzedEmails.length === 0 && !loading && (
-          <div className="text-center py-20 border-2 border-dashed rounded-xl bg-card/50">
+          <div className="text-center py-20 border-2 border-dashed rounded-md bg-card">
             <div className="mx-auto h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-4">
               <Mail className="h-6 w-6 text-muted-foreground" />
             </div>
@@ -144,10 +144,10 @@ export function FollowUps({ initialEmails }: FollowUpsProps) {
 
       {selectedEmail && (
         <Dialog open={true} onOpenChange={() => setSelectedEmail(null)}>
-          <DialogContent className="sm:max-w-[700px] glass-card border-none shadow-2xl">
+          <DialogContent className="sm:max-w-[700px] glass-card border-none">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center">
                   <Sparkles className="h-4 w-4 text-primary" />
                 </div>
                 AI Suggested Follow-up
@@ -159,17 +159,17 @@ export function FollowUps({ initialEmails }: FollowUpsProps) {
             <div className="grid gap-6 py-4">
               <div className="grid gap-4 p-4 rounded-lg bg-muted/50 border">
                 <div className="space-y-1">
-                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">To</span>
+                  <span className="text-xs font-medium text-muted-foreground">To</span>
                   <p className="text-sm font-medium">{selectedEmail.suggested_followup?.recipient}</p>
                 </div>
                 <div className="space-y-1">
-                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Subject</span>
+                  <span className="text-xs font-medium text-muted-foreground">Subject</span>
                   <p className="text-sm font-medium">{selectedEmail.suggested_followup?.subject}</p>
                 </div>
               </div>
 
               <div className="space-y-2">
-                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Message Content</span>
+                <span className="text-xs font-medium text-muted-foreground">Message Content</span>
                 <Textarea
                   value={editedFollowup}
                   onChange={(e) => setEditedFollowup(e.target.value)}

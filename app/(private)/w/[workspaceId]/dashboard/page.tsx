@@ -1,27 +1,32 @@
 import { DashboardTabs } from '@/components/dashboard/DashboardTabs';
 import { apiFetchServer } from '@/lib/api-server';
-import type { BusinessOutcomesResponse, ProspectV2 } from '@/lib/api-types';
+import type { BusinessOutcomesResponse, CampaignsResponse, ProspectV2 } from '@/lib/api-types';
+import { PageHeader } from '@/components/page-header';
+import GoogleConnectButton from '@/components/GoogleConnectButton';
 import { getRedis } from '@/utils/redis';
 import { createClient } from '@/utils/supabase/server';
-import { Zap } from 'lucide-react';
 
 export default async function DashboardPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ workspaceId: string }>;
+  searchParams: Promise<{ tab?: string }>;
 }) {
   const { workspaceId } = await params;
+  const { tab } = await searchParams;
   const supabase = await createClient();
 
   // Headline stats come from the workspace-scoped v2 API; the legacy tables
   // below only feed the follow-ups / meetings tabs.
-  const [v2Prospects, outcomes] = await Promise.all([
+  const [v2Prospects, outcomes, campaignsRes] = await Promise.all([
     apiFetchServer<{ prospects: ProspectV2[] }>('/v2/prospects', { workspaceId }).catch(
       () => null
     ),
     apiFetchServer<BusinessOutcomesResponse>('/evals/outcomes', { workspaceId }).catch(
       () => null
     ),
+    apiFetchServer<CampaignsResponse>('/campaigns', { workspaceId }).catch(() => null),
   ]);
 
   // Fetch emails with status for analytics
@@ -70,6 +75,9 @@ export default async function DashboardPage({
   const avgResponseHours = responseCount > 0 ? Math.round(totalResponseTime / responseCount) : 24;
 
   const dashboardData = {
+    workspaceId,
+    campaigns: campaignsRes?.campaigns ?? [],
+    outcomes: outcomes?.outcomes ?? null,
     // Email data
     cachedEmails: JSON.parse(cachedEmails || '[]'),
     emailSent: emailsData || [],
@@ -94,25 +102,13 @@ export default async function DashboardPage({
   };
 
   return (
-    <div className="container mx-auto py-8">
-      <div className="flex flex-col gap-8">
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Zap className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-                Dashboard
-              </h1>
-              <p className="text-muted-foreground">
-                Overview of your sales pipeline and activity
-              </p>
-            </div>
-          </div>
-        </div>
-        <DashboardTabs dashboardData={dashboardData} />
-      </div>
+    <div className="space-y-8">
+      <PageHeader
+        title="Dashboard"
+        description="What is waiting on you, how campaigns are doing, and what outreach has produced."
+        actions={<GoogleConnectButton />}
+      />
+      <DashboardTabs dashboardData={dashboardData} initialTab={tab} />
     </div>
   );
 }

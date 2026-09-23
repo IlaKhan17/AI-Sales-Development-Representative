@@ -83,12 +83,12 @@ export default function EmailDraftModal({ prospect, emailDraft, onClose }: Email
   return (
     <Dialog open={true} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[700px] glass-card border-primary/10 p-0 overflow-hidden">
-        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500" />
+        <div className="absolute top-0 left-0 w-full h-1 from-foreground via-muted-foreground to-muted-foreground" />
 
-        <DialogHeader className="px-6 py-4 bg-muted/20 border-b border-border/50">
+        <DialogHeader className="px-6 py-4 bg-muted/20 border-b border-border">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="p-2 rounded-full bg-primary/10 text-primary">
+              <div className="p-2 rounded-full bg-muted text-primary">
                 <Wand2 className="h-4 w-4" />
               </div>
               <div>
@@ -114,23 +114,23 @@ export default function EmailDraftModal({ prospect, emailDraft, onClose }: Email
           {email ? (
             <>
               <div className="space-y-2">
-                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Subject Line</label>
+                <label className="text-xs font-semibold text-muted-foreground">Subject Line</label>
                 <Input
                   value={email.subject}
                   onChange={(e) => setEmail({ ...email, subject: e.target.value })}
-                  className="font-medium bg-background/50 border-border/50 focus-visible:ring-primary/20"
+                  className="font-medium bg-background/50 border-border focus-visible:ring-primary/20"
                 />
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Email Content</label>
+                <label className="text-xs font-semibold text-muted-foreground">Email Content</label>
                 <div className="relative">
                   <Textarea
                     value={email.content}
                     onChange={(e) => setEmail({ ...email, content: e.target.value })}
-                    className="min-h-[300px] resize-y bg-background/50 border-border/50 focus-visible:ring-primary/20 font-sans leading-relaxed p-4"
+                    className="min-h-[300px] resize-y bg-background/50 border-border focus-visible:ring-primary/20 font-sans leading-relaxed p-4"
                   />
-                  <div className="absolute bottom-3 right-3 text-xs text-muted-foreground bg-background/80 px-2 py-1 rounded-md backdrop-blur-sm border border-border/50">
+                  <div className="absolute bottom-3 right-3 text-xs text-muted-foreground bg-background/80 px-2 py-1 rounded-md border border-border">
                     {email.content.length} chars
                   </div>
                 </div>
@@ -144,14 +144,14 @@ export default function EmailDraftModal({ prospect, emailDraft, onClose }: Email
           )}
         </div>
 
-        <DialogFooter className="px-6 py-4 bg-muted/20 border-t border-border/50 gap-2">
-          <Button variant="outline" onClick={onClose} className="border-border/50 hover:bg-muted/50">
+        <DialogFooter className="px-6 py-4 bg-muted/20 border-t border-border gap-2">
+          <Button variant="outline" onClick={onClose} className="border-border hover:bg-muted/50">
             Discard
           </Button>
           <Button
             onClick={handleSendEmail}
             disabled={loading || !email}
-            className="min-w-[120px] shadow-lg shadow-primary/20"
+            className="min-w-[120px] shadow-primary/20"
           >
             {loading ? (
               <>

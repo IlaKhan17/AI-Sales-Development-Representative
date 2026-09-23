@@ -154,8 +154,8 @@ export function CalendarEvents() {
         return (
             <Card className="glass-card border-dashed border-2 border-muted-foreground/20">
                 <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-                    <div className="p-4 rounded-full bg-blue-500/10 mb-4">
-                        <CalendarPlus className="h-8 w-8 text-blue-500" />
+                    <div className="p-4 rounded-full bg-muted mb-4">
+                        <CalendarPlus className="h-8 w-8 text-foreground" />
                     </div>
                     <h3 className="text-lg font-semibold mb-2">
                         Connect Google Calendar
@@ -177,7 +177,7 @@ export function CalendarEvents() {
         <div className="space-y-4">
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center">
                         <CalendarPlus className="h-5 w-5 text-primary" />
                     </div>
                     <div>
@@ -189,7 +189,7 @@ export function CalendarEvents() {
                 </div>
                 <Button
                     onClick={() => setShowCreateDialog(true)}
-                    className="gap-2 shadow-sm"
+                    className="gap-2"
                 >
                     <CalendarPlus className="h-4 w-4" />
                     Schedule Meeting
@@ -208,7 +208,7 @@ export function CalendarEvents() {
                     {events.map((event) => (
                         <Card
                             key={event.id}
-                            className="glass-card hover:border-primary/20 transition-all"
+                            className="glass-card hover:border-border transition-all"
                         >
                             <CardContent className="p-4">
                                 <div className="flex items-start justify-between gap-4">
@@ -277,10 +277,10 @@ export function CalendarEvents() {
 
             {/* Create Event Dialog */}
             <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-                <DialogContent className="sm:max-w-[500px] glass-card border-none shadow-2xl p-0 overflow-hidden">
-                    <DialogHeader className="px-6 py-4 bg-muted/20 border-b border-border/50">
+                <DialogContent className="sm:max-w-[500px] glass-card border-none p-0 overflow-hidden">
+                    <DialogHeader className="px-6 py-4 bg-muted/20 border-b border-border">
                         <DialogTitle className="flex items-center gap-2">
-                            <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                            <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center">
                               <CalendarPlus className="h-4 w-4 text-primary" />
                             </div>
                             Schedule Meeting
@@ -349,7 +349,7 @@ export function CalendarEvents() {
                         </div>
                     </div>
 
-                    <DialogFooter className="px-6 py-4 bg-muted/20 border-t border-border/50 gap-2">
+                    <DialogFooter className="px-6 py-4 bg-muted/20 border-t border-border gap-2">
                         <Button
                             variant="outline"
                             onClick={() => setShowCreateDialog(false)}
@@ -359,7 +359,7 @@ export function CalendarEvents() {
                         <Button
                             onClick={handleCreateEvent}
                             disabled={creating}
-                            className="gap-2 shadow-sm"
+                            className="gap-2"
                         >
                             {creating ? (
                                 <>

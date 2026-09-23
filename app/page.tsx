@@ -85,6 +85,7 @@ export default async function LandingPage() {
     <div className="flex flex-col">
       <Header user={user} />
 
+      <main>
       <section className="px-4 pb-20 pt-12 md:px-8 md:pt-20">
         <div className="mx-auto grid max-w-6xl items-start gap-12 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:gap-16">
           <div className="lg:pt-10">
@@ -176,6 +177,8 @@ export default async function LandingPage() {
           </Button>
         </div>
       </section>
+
+      </main>
 
       <footer className="border-t border-border px-4 py-8 md:px-8">
         <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-2 text-sm md:flex-row md:items-center">

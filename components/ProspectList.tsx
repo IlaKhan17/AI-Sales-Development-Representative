@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Loader2, Search, SlidersHorizontal, Plus, Filter, Folder, Calendar, ChevronRight } from 'lucide-react';
+import { Loader2, Search, SlidersHorizontal, Plus, Filter, Calendar, ChevronRight } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -178,18 +178,15 @@ export default function ProspectList({ initialProspects }: ProspectListProps) {
       {/* Sidebar - Projects / Folders */}
       <div className="w-full md:w-64 space-y-4 shrink-0">
         <div className="flex items-center justify-between">
-          <h3 className="font-semibold text-lg flex items-center gap-2">
-            <Folder className="h-5 w-5 text-primary" />
-            Projects
-          </h3>
+          <h2 className="text-base font-semibold">Searches</h2>
         </div>
 
         <div className="space-y-2 max-h-[600px] overflow-y-auto pr-2">
           {loadingJobs ? (
             <div className="flex justify-center p-4"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
           ) : jobs.length === 0 ? (
-            <div className="text-sm text-muted-foreground p-4 text-center border border-dashed rounded-lg bg-muted/30">
-              No projects yet. Start a search!
+            <div className="rounded-md border border-dashed border-border p-4 text-center text-sm text-muted-foreground">
+              No searches yet.
             </div>
           ) : (
             jobs.map((job) => (
@@ -197,10 +194,10 @@ export default function ProspectList({ initialProspects }: ProspectListProps) {
                 key={job.id}
                 onClick={() => handleJobSelect(job.id)}
                 className={cn(
-                  "w-full text-left p-3 rounded-lg border transition-all text-sm group relative overflow-hidden",
+                  "w-full text-left px-3 py-2.5 rounded-md text-sm transition-colors",
                   selectedJobId === job.id
-                    ? "bg-primary/10 border-primary shadow-sm"
-                    : "bg-card border-border/50 hover:bg-muted/50 hover:border-border"
+                    ? "bg-card ring-1 ring-border shadow-[inset_2px_0_0_hsl(var(--primary))]"
+                    : "hover:bg-card/70"
                 )}
               >
                 <div className="font-medium truncate pr-2 mb-1" title={job.name}>{job.name}</div>
@@ -221,9 +218,7 @@ export default function ProspectList({ initialProspects }: ProspectListProps) {
                     </span>
                   ))}
                 </div>
-                {selectedJobId === job.id && (
-                  <div className="absolute right-0 top-0 bottom-0 w-1 bg-primary" />
-                )}
+
               </button>
             ))
           )}
@@ -231,16 +226,16 @@ export default function ProspectList({ initialProspects }: ProspectListProps) {
 
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="w-full shadow-sm" size="lg">
+            <Button className="w-full">
               <Plus className="mr-2 h-4 w-4" />
-              New Project
+              New search
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[500px] max-h-[90dvh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Find New Prospects</DialogTitle>
+              <DialogTitle>New search</DialogTitle>
               <DialogDescription>
-                Create a new project folder by defining your search criteria.
+                Describe who you are looking for. Paste a job description to fill the fields for you.
               </DialogDescription>
             </DialogHeader>
             <ProspectPreferencesForm onSubmit={handleGenerateNewProspects} isLoading={loading} />
@@ -251,25 +246,25 @@ export default function ProspectList({ initialProspects }: ProspectListProps) {
 
       {/* Main Content - Prospect List */}
       <div className="flex-1 space-y-6">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between bg-card/30 p-4 rounded-xl border border-border/50 backdrop-blur-sm">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Search by name, role, or company..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 bg-background/50 border-border/50 focus:bg-background transition-colors"
+              className="pl-9 bg-card"
             />
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-[160px] bg-background/50 border-border/50">
+              <SelectTrigger className="w-[160px] bg-card">
                 <Filter className="mr-2 h-4 w-4" />
                 <SelectValue placeholder="Sort by" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="alignment">Highest Score</SelectItem>
-                <SelectItem value="recent">Most Recent</SelectItem>
+                <SelectItem value="alignment">Highest score</SelectItem>
+                <SelectItem value="recent">Most recent</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -277,25 +272,25 @@ export default function ProspectList({ initialProspects }: ProspectListProps) {
 
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 space-y-4">
-            <Loader2 className="h-10 w-10 animate-spin text-primary" />
-            <p className="text-muted-foreground">Loading prospects...</p>
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">Loading prospects</p>
           </div>
         ) : filteredProspects.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center space-y-4 rounded-xl border border-dashed border-border/50 bg-card/10">
-            <div className="p-4 rounded-full bg-primary/10">
-              <Search className="h-8 w-8 text-primary/60" />
-            </div>
-            <div className="space-y-2">
-              <h3 className="text-xl font-semibold">No prospects found</h3>
-              <p className="text-muted-foreground max-w-sm mx-auto">
+          <div className="flex flex-col items-center justify-center space-y-3 rounded-md border border-dashed border-border py-16 text-center">
+            <Search className="h-6 w-6 text-muted-foreground" />
+            <div className="space-y-1">
+              <h3 className="text-base font-semibold">
+                {prospects.length === 0 && !selectedJobId ? 'Pick a search' : 'No prospects to show'}
+              </h3>
+              <p className="mx-auto max-w-sm text-sm text-muted-foreground">
                 {prospects.length === 0
-                  ? (selectedJobId ? "This project has no prospects." : "Select a project or create a new one.")
-                  : 'Try adjusting your search terms or filters to find what you looking for.'}
+                  ? (selectedJobId ? 'This search found nobody who matched.' : 'Choose a search on the left to see who it found, or start a new one.')
+                  : 'Nobody matches that filter. Try a different name, role or company.'}
               </p>
             </div>
             {!selectedJobId && (
-              <Button onClick={() => setIsDialogOpen(true)} variant="outline" className="mt-4">
-                Create First Project
+              <Button onClick={() => setIsDialogOpen(true)} variant="outline" className="mt-2">
+                New search
               </Button>
             )}
           </div>
