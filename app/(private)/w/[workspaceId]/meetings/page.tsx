@@ -237,7 +237,9 @@ export default function MeetingsPage() {
 
         <PageSection
           title="Book a meeting"
-          description={`Free times from your Google Calendar, shown in ${timezone}.`}
+          // Not ${timezone}: the server renders in UTC and the browser in local
+          // time, and differing text breaks hydration (React #418).
+          description="Free times from your Google Calendar, shown in your local time."
         >
           <div className="rounded-md border border-border bg-card p-4">
             <div className="flex flex-col gap-4 sm:flex-row">
