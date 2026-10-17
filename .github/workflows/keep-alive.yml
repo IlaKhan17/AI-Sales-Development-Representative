@@ -1,0 +1,20 @@
+name: keep-alive
+
+# Free-tier Supabase pauses a project after ~7 days without activity, and
+# Upstash deletes idle databases. The deep health check queries both, so a
+# daily call keeps production awake even if the worker is down.
+on:
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping production health
+        run: |
+          body=$(curl -fsS --max-time 60 "https://davis-backend.ilarehman.com/health?deep=true")
+          echo "$body"
+          echo "$body" | grep -q '"supabase":"ok"' || { echo "Supabase not ok"; exit 1; }
+          echo "$body" | grep -q '"redis":"ok"' || { echo "Redis not ok"; exit 1; }
