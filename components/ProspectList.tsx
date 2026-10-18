@@ -55,6 +55,15 @@ export default function ProspectList({ initialProspects }: ProspectListProps) {
   const [prospects, setProspects] = useState<Prospect[]>(initialProspects);
   const [selectedProspect, setSelectedProspect] = useState<Prospect | null>(null);
   const [loading, setLoading] = useState(false);
+  const [starting, setStarting] = useState(false);
+  // A discovery running on the worker, shown as a progress banner.
+  const [search, setSearch] = useState<{ goal: string; startedAt: number } | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!search) return;
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [search]);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('alignment');
 
@@ -117,9 +126,13 @@ export default function ProspectList({ initialProspects }: ProspectListProps) {
       pain_points_to_target: string[];
     };
   }) => {
-    setLoading(true);
+    // Discovery takes minutes (searches, scrapers, AI analysis, email finding),
+    // so it runs on the background worker and the page polls the run. Holding
+    // one HTTP request open for ~4 minutes looked frozen and could time out.
+    setStarting(true);
+    let runId: string;
     try {
-      const data = await apiFetch<DiscoveryJobProspectsResponse>('/prospects/discover', {
+      const res = await apiFetch<{ run_id: string }>('/prospects/discover-async', {
         method: 'POST',
         body: {
           company_description: preferences.company_description,
@@ -131,22 +144,45 @@ export default function ProspectList({ initialProspects }: ProspectListProps) {
           icp: preferences.icp ?? null,
         },
       });
-      if (data.prospects && data.prospects.length > 0) {
-        setProspects(data.prospects);
-        toast.success(`Found ${data.prospects.length} new prospects!`);
-        setIsDialogOpen(false);
-        // Refresh jobs list to show the new "Project"
-        fetchJobs();
-        // Select the new project (the goal)
-        setSelectedJobId(preferences.goal);
-      } else {
-        toast.info("No new prospects found with existing criteria.");
-      }
+      runId = res.run_id;
     } catch (error) {
-      console.error('Error generating prospects:', error);
-      toast.error("Failed to generate prospects. Please try again.");
+      console.error('Error starting discovery:', error);
+      toast.error(
+        error instanceof ApiError ? `Couldn't start the search: ${error.message}` : "Couldn't start the search. Please try again."
+      );
+      setStarting(false);
+      return;
+    }
+    setStarting(false);
+    setIsDialogOpen(false);
+    setSearch({ goal: preferences.goal, startedAt: Date.now() });
+
+    const startedAt = Date.now();
+    try {
+      while (Date.now() - startedAt < 15 * 60 * 1000) {
+        await new Promise((r) => setTimeout(r, 5000));
+        const { run } = await apiFetch<{ run: { status: string; error?: string | null } }>(`/runs/${runId}`);
+        if (run.status === 'completed') {
+          await fetchJobs();
+          await handleJobSelect(preferences.goal);
+          toast.success('Search finished. Results are below.');
+          return;
+        }
+        if (run.status === 'failed') {
+          toast.error(`The search failed: ${run.error || 'unknown error'}`);
+          return;
+        }
+        if (run.status === 'queued' && Date.now() - startedAt > 90 * 1000) {
+          toast.error('The background worker has not picked up this search. Check that the worker service is running.');
+          return;
+        }
+      }
+      toast.error('The search is taking longer than 15 minutes. Check back later.');
+    } catch (error) {
+      console.error('Error checking discovery status:', error);
+      toast.error('Lost track of the search. Refresh the page in a few minutes to see results.');
     } finally {
-      setLoading(false);
+      setSearch(null);
     }
   };
 
@@ -238,7 +274,7 @@ export default function ProspectList({ initialProspects }: ProspectListProps) {
                 Describe who you are looking for. Paste a job description to fill the fields for you.
               </DialogDescription>
             </DialogHeader>
-            <ProspectPreferencesForm onSubmit={handleGenerateNewProspects} isLoading={loading} />
+            <ProspectPreferencesForm onSubmit={handleGenerateNewProspects} isLoading={starting || !!search} />
           </DialogContent>
         </Dialog>
       </div>
@@ -269,6 +305,21 @@ export default function ProspectList({ initialProspects }: ProspectListProps) {
             </Select>
           </div>
         </div>
+
+        {search && (
+          <div className="flex items-center gap-3 rounded-md border border-border bg-card px-4 py-3" role="status">
+            <Loader2 className="h-4 w-4 shrink-0 animate-spin text-muted-foreground" />
+            <p className="min-w-0 text-sm">
+              <span className="font-medium">Searching for prospects</span>
+              <span className="text-muted-foreground">
+                {' '}
+                for &ldquo;{search.goal}&rdquo;. {Math.floor((now - search.startedAt) / 60000)}:
+                {String(Math.floor(((now - search.startedAt) % 60000) / 1000)).padStart(2, '0')} elapsed,
+                usually 2&ndash;4 minutes. Results open here when it finishes.
+              </span>
+            </p>
+          </div>
+        )}
 
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 space-y-4">

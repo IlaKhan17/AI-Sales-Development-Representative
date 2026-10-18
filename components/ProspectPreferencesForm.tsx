@@ -156,6 +156,17 @@ export default function ProspectPreferencesForm({ onSubmit, isLoading }: Prospec
         }
     };
 
+    // A title typed but not yet added with Enter or "+" still counts; before,
+    // the button stayed disabled with no explanation and looked broken.
+    const pendingTitle = jobTitleInput.trim();
+    const allTitles =
+        pendingTitle && !jobTitles.includes(pendingTitle) ? [...jobTitles, pendingTitle] : jobTitles;
+    const missing = [
+        !companyDescription.trim() && 'a company description',
+        !goal.trim() && 'a prospecting goal',
+        allTitles.length === 0 && 'at least one job title',
+    ].filter(Boolean) as string[];
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
@@ -164,7 +175,7 @@ export default function ProspectPreferencesForm({ onSubmit, isLoading }: Prospec
         onSubmit({
             company_description: companyDescription,
             goal,
-            job_titles: jobTitles,
+            job_titles: allTitles,
             enable_playwright: enablePlaywright,
             enable_email_discovery: enableEmailDiscovery,
             keyword_hint: keywordHint,
@@ -375,12 +386,17 @@ export default function ProspectPreferencesForm({ onSubmit, isLoading }: Prospec
             </div>
 
             {/* Sticky so the submit button stays reachable when autofill expands the form */}
-            <DialogFooter className="sticky -bottom-6 -mx-6 -mb-6 border-t bg-background px-6 py-4">
-                <Button type="submit" disabled={isLoading || jobTitles.length === 0 || !companyDescription || !goal}>
+            <DialogFooter className="sticky -bottom-6 -mx-6 -mb-6 flex-col gap-2 border-t bg-background px-6 py-4 sm:flex-row sm:items-center sm:justify-between sm:space-x-0">
+                <p className="text-xs text-muted-foreground" aria-live="polite">
+                    {missing.length > 0
+                        ? `Add ${missing.join(', ')} to start.`
+                        : 'Runs in the background and usually takes 2\u20134 minutes.'}
+                </p>
+                <Button type="submit" disabled={isLoading || missing.length > 0}>
                     {isLoading ? (
                         <>
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Finding Prospects...
+                            Starting...
                         </>
                     ) : (
                         'Start Discovery'
