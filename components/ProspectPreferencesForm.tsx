@@ -389,7 +389,7 @@ export default function ProspectPreferencesForm({ onSubmit, isLoading }: Prospec
             <DialogFooter className="sticky -bottom-6 -mx-6 -mb-6 flex-col gap-2 border-t bg-background px-6 py-4 sm:flex-row sm:items-center sm:justify-between sm:space-x-0">
                 <p className="text-xs text-muted-foreground" aria-live="polite">
                     {missing.length > 0
-                        ? `Add ${missing.join(', ')} to start.`
+                        ? `Add ${missing.length > 1 ? `${missing.slice(0, -1).join(', ')} and ${missing.at(-1)}` : missing[0]} to start.`
                         : 'Runs in the background and usually takes 2\u20134 minutes.'}
                 </p>
                 <Button type="submit" disabled={isLoading || missing.length > 0}>
