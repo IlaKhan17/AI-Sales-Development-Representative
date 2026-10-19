@@ -9,6 +9,7 @@ from email.mime.text import MIMEText
 from typing import Any, Dict, List, Optional
 
 from dotenv import load_dotenv
+from google.auth.exceptions import RefreshError
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import Flow
@@ -26,6 +27,11 @@ _OAUTH_STATE_PREFIX = "google_oauth_state:"
 _OAUTH_STATE_TTL_SECONDS = 600
 
 logger = logging.getLogger(__name__)
+
+NOT_CONNECTED = (
+    "Gmail is not connected, or the connection expired. "
+    "Reconnect Google in Settings > Integrations."
+)
 
 # Google OAuth Config
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
@@ -209,6 +215,15 @@ class GoogleService:
                     }
                 ).eq("user_id", user_id).execute()
                 logger.info(f"Refreshed Google token for user {user_id}")
+            except RefreshError as e:
+                # invalid_grant = Google revoked or expired the refresh token
+                # (e.g. 7-day expiry while the OAuth app is in Testing). The
+                # stored row is now useless; delete it so the UI offers
+                # "Connect Gmail" instead of claiming the account is connected.
+                logger.error(f"Google token refresh rejected for {user_id}: {e}")
+                if "invalid_grant" in str(e):
+                    self.supabase.table("google_tokens").delete().eq("user_id", user_id).execute()
+                return None
             except Exception as e:
                 logger.error(f"Failed to refresh Google token for {user_id}: {e}")
                 return None
@@ -226,6 +241,11 @@ class GoogleService:
 
         if not result.data:
             return {"connected": False}
+
+        # A stored row is not proof of a working connection: refresh the token
+        # if it has expired. get_credentials deletes rows Google has revoked.
+        if await self.get_credentials(user_id) is None:
+            return {"connected": False, "reason": "expired"}
 
         return {
             "connected": True,
@@ -255,7 +275,7 @@ class GoogleService:
         """Send an email via Gmail API."""
         creds = await self.get_credentials(user_id)
         if not creds:
-            raise ValueError("Google account not connected. Please connect first.")
+            raise ValueError(NOT_CONNECTED)
 
         service = build("gmail", "v1", credentials=creds)
 
@@ -290,7 +310,7 @@ class GoogleService:
         """List Gmail messages matching a query."""
         creds = await self.get_credentials(user_id)
         if not creds:
-            raise ValueError("Google account not connected.")
+            raise ValueError(NOT_CONNECTED)
 
         service = build("gmail", "v1", credentials=creds)
 
@@ -336,7 +356,7 @@ class GoogleService:
         """Get replies to emails we've sent (threads with SENT + INBOX)."""
         creds = await self.get_credentials(user_id)
         if not creds:
-            raise ValueError("Google account not connected.")
+            raise ValueError(NOT_CONNECTED)
 
         service = build("gmail", "v1", credentials=creds)
 
@@ -410,7 +430,7 @@ class GoogleService:
         """List upcoming Google Calendar events."""
         creds = await self.get_credentials(user_id)
         if not creds:
-            raise ValueError("Google account not connected.")
+            raise ValueError(NOT_CONNECTED)
 
         service = build("calendar", "v3", credentials=creds)
 
@@ -461,7 +481,7 @@ class GoogleService:
         between two ISO timestamps, via the freebusy API."""
         creds = await self.get_credentials(user_id)
         if not creds:
-            raise ValueError("Google account not connected.")
+            raise ValueError(NOT_CONNECTED)
 
         service = build("calendar", "v3", credentials=creds)
         result = (
@@ -493,7 +513,7 @@ class GoogleService:
         """Create a Google Calendar event."""
         creds = await self.get_credentials(user_id)
         if not creds:
-            raise ValueError("Google account not connected.")
+            raise ValueError(NOT_CONNECTED)
 
         service = build("calendar", "v3", credentials=creds)
 

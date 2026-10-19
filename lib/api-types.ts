@@ -194,6 +194,8 @@ export interface RepliesResponse {
 
 export interface GoogleStatus {
   connected: boolean;
+  /** "expired" when a saved connection was rejected by Google. */
+  reason?: string;
   email?: string;
   scopes?: string[];
   last_refreshed?: string;

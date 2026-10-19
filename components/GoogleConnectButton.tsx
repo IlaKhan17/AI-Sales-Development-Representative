@@ -128,7 +128,7 @@ export default function GoogleConnectButton() {
             className="gap-2 border-border hover:bg-muted hover:border-border text-foreground"
         >
             <Mail className="h-4 w-4" />
-            Connect Gmail
+            {status.reason === 'expired' ? 'Reconnect Gmail' : 'Connect Gmail'}
         </Button>
     );
 }
