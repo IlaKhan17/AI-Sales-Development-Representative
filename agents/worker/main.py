@@ -33,3 +33,7 @@ class WorkerSettings:
     on_startup = startup
     max_jobs = 5
     job_timeout = 1800  # discovery can take a while
+    # arq polls Redis for new jobs every 0.5s by default (~172,800 commands a
+    # day), which exhausted Upstash's 500K/month free quota in about 3 days.
+    # Jobs here run for minutes, so a 15s pickup delay costs nothing.
+    poll_delay = 15
