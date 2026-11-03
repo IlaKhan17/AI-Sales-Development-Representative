@@ -4,6 +4,7 @@ import json
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
+from openai import RateLimitError
 
 from config import settings
 from core.db import get_supabase, get_supabase_admin
@@ -210,6 +211,14 @@ async def autofill_preferences(request: AutoFillRequest):
         result = await llm_service.get_json_response(rp.system, rp.user, json_structure)
         return result
 
+    except RateLimitError as e:
+        logger.error(f"Error in autofill: {str(e)}")
+        if "insufficient_quota" in str(e) or "credit_balance_exhausted" in str(e):
+            raise HTTPException(
+                status_code=503,
+                detail="The AI provider (OpenAI) is out of credits. Add credits to the OpenAI account, then try again.",
+            )
+        raise HTTPException(status_code=503, detail="The AI provider is busy. Try again in a minute.")
     except Exception as e:
         logger.error(f"Error in autofill: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))

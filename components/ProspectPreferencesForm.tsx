@@ -7,7 +7,7 @@ import { Switch } from '@/components/ui/switch';
 import { Loader2, Plus, X, Sparkles, Globe, AtSign, ChevronDown, ChevronUp, Target } from 'lucide-react';
 import { DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { apiFetch } from '@/lib/api';
+import { apiFetch, ApiError } from '@/lib/api';
 import type { AutofillResponse } from '@/lib/api-types';
 
 type ICPConfig = {
@@ -143,7 +143,11 @@ export default function ProspectPreferencesForm({ onSubmit, isLoading }: Prospec
             toast.success("Preferences + ICP auto-filled from Job Description!");
         } catch (error) {
             console.error("Auto-fill error:", error);
-            toast.error("Failed to auto-fill. Please try manually.");
+            toast.error(
+                error instanceof ApiError && error.status === 503
+                    ? error.message
+                    : "Failed to auto-fill. Please try manually."
+            );
         } finally {
             setIsAutoFilling(false);
         }
